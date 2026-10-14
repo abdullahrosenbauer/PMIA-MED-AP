@@ -236,8 +236,10 @@ function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("log
 async function boot(){
  if(typeof supabase==="undefined"){loginMsg("Could not load the Supabase library. Check your internet or try another network.",false);return}
  if(SUPABASE_KEY.startsWith("PASTE")){loginMsg("Not configured yet: paste your Supabase key in index.html.",false);return}
- sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
- const {data:{session}}=await sb.auth.getSession();
+ sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{lock:async(n,t,fn)=>await fn()}});
+ const sess=await Promise.race([sb.auth.getSession(),new Promise(r=>setTimeout(()=>r(null),8000))]);
+ if(sess===null){loginMsg("Connection is slow or blocked. Sign in again:",true);return}
+ const {data:{session}}=sess;
  if(!session){loginMsg("Sign in with your company account.",true);return}
  const {data:st,error:se}=await sb.from("staff").select("name,role").eq("email",session.user.email.toLowerCase()).maybeSingle();
  if(se){loginMsg("Database error: "+se.message,false);$("so").hidden=false;return}
