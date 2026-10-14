@@ -184,8 +184,7 @@ const nfx=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
 function orderedList(){return [...trucks].sort((x,y)=>((+x.order||1e9)-(+y.order||1e9))||nfx(x.fleetNo,y.fleetNo))}
 function applyOrder(list){list.forEach((z,i)=>{if(+z.order!==i+1)save(z,{order:i+1})})}
 function moveTruck(id,d){const l=orderedList(),i=l.findIndex(z=>z.id===id),j=i+d;if(i<0||j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];applyOrder(l)}
-function mvBtns(t){if($("srt").value!=="order")return "";const f=!$("q").value&&!$("fs").value&&!$("fp").value;
- return `<span class="b pn">#${t.order||"–"}</span> `+(canWrite&&f?`<button data-mv="${esc(t.id)}" data-d="-1" style="padding:1px 8px">▲</button><button data-mv="${esc(t.id)}" data-d="1" style="padding:1px 8px;margin-right:6px">▼</button>`:"")}
+function mvBtns(t){return $("srt").value==="order"?`<span class="b pn">#${t.order||"–"}</span> `:""}
 function sorted(a){const m=$("srt").value,nf=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
  const l=t=>{const v=lastMaint(t);return v==="—"?"":v};
  const by={fleet:(x,y)=>nf(x.fleetNo,y.fleetNo),order:(x,y)=>((+x.order||1e9)-(+y.order||1e9))||nf(x.fleetNo,y.fleetNo),odo:(x,y)=>(y.odo||0)-(x.odo||0),maint:(x,y)=>l(x).localeCompare(l(y))||nf(x.fleetNo,y.fleetNo),pend:(x,y)=>pwOpen(y).length-pwOpen(x).length||nf(x.fleetNo,y.fleetNo)};
