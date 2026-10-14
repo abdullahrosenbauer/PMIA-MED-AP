@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fleet Maintenance Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--pr:#d5001c;--dk:#2b2b2b;--tx:#222;--mu:#6b6f76;--bd:#dcdde0;--gb:#f2f2f3;--ok:#1a7f37;--okb:#e5f4ea;--bad:#d5001c;--badb:#fde8ea;--wa:#9a5b00;--wab:#fff1d6;--bl:#1d5fb8;--blb:#e4eefb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--tx);font:15px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+.top{border-top:5px solid var(--pr);border-bottom:1px solid var(--bd);background:#fff}
+header{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px}
+.logo{display:flex;align-items:center;gap:12px}.logo svg{height:30px;width:auto}
+.logo .t{border-left:2px solid var(--bd);padding-left:12px;font-size:12px;line-height:1.2;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}.logo .t b{display:block;color:var(--dk);font-size:14px}
+.role{font-size:12px;padding:3px 10px;background:var(--gb);color:var(--dk);border-left:3px solid var(--pr)}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--bd);margin-bottom:14px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:9px 16px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--mu);border-radius:0}
+.tab.on{color:var(--pr);border-bottom-color:var(--pr)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--bd);border-top:3px solid var(--dk);padding:10px 12px}.kpi.r{border-top-color:var(--pr)}.kpi b{font-size:26px;display:block;line-height:1.1}.kpi small{color:var(--mu);text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:#fff;border:1px solid #c4c6cb;border-radius:3px;padding:8px 10px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--pr);outline-offset:-1px}
+input[type=search]{flex:1;min-width:150px}
+button{cursor:pointer;font-weight:600}button.p{background:var(--pr);color:#fff;border-color:var(--pr)}button.p:hover{background:#b30018}
+.wrap{overflow-x:auto;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:11px;color:#fff;background:var(--dk);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}tr.r{cursor:pointer}tr.r:hover td{background:#fafafa}tr:last-child td{border-bottom:0}
+.b{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:2px;margin:1px 2px 1px 0;white-space:nowrap}
+.on{background:var(--okb);color:var(--ok)}.off{background:var(--badb);color:var(--bad)}.pn{background:var(--gb);color:var(--mu)}.pw{background:var(--wab);color:var(--wa)}.pb{background:var(--blb);color:var(--bl)}
+.empty{padding:30px;text-align:center;color:var(--mu)}.mu{color:var(--mu)}
+dialog{border:0;border-top:5px solid var(--pr);background:#fff;color:var(--tx);width:min(760px,96vw);max-height:92vh;padding:0;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:#fff;z-index:2}.dh b{font-size:17px}
+.db{padding:14px;background:var(--gb)}.sec{background:#fff;border:1px solid var(--bd);padding:12px;margin-bottom:12px}
+.sec h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--pr)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}.row input,.row select{flex:1;min-width:110px}.row input.sm{flex:0 0 80px;min-width:70px}
+.h{border-left:3px solid var(--pr);padding:3px 10px;margin:8px 0}.h small{color:var(--mu)}
+.part{border:1px solid var(--bd);border-left:4px solid var(--dk);padding:10px;margin-bottom:10px}
+.part .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.trail{margin-top:8px;font-size:12.5px;color:var(--mu);border-top:1px dashed var(--bd);padding-top:6px}.trail div{padding:1px 0}
+details summary{cursor:pointer;font-size:12px;color:var(--mu)}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.fg label{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;display:flex;flex-direction:column;gap:3px}.fg input,.fg select{font-size:15px;text-transform:none;letter-spacing:0}
+.ig{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px}.ig small,.ax small{display:block;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.ig b{font-weight:600;word-break:break-word}
+.ax{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.ax>div{border:1px solid var(--bd);border-top:3px solid var(--dk);padding:8px}.ax b{display:block}.ax span{font-size:12px;color:var(--mu)}
+.row label{display:flex;align-items:center;gap:5px;font-size:14px}.row label input{flex:none;min-width:0}
+.rep h2{margin:0}.rep h4{margin:16px 0 6px;color:var(--pr);text-transform:uppercase;letter-spacing:.08em;font-size:12px;border-bottom:1px solid var(--bd);padding-bottom:3px}
+.rt{min-width:0;font-size:13px}.rt th{background:var(--gb);color:var(--dk)}.rt td,.rt th{padding:5px 8px}
+.rh{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:3px solid var(--pr);padding-bottom:8px}
+@media print{.top,main,#dlg,#adlg,.noprint{display:none!important}#rdlg{position:static;width:100%;max-height:none;box-shadow:none;border:0;overflow:visible}#rdlg .db{background:#fff}}
+</style></head><body>
+<div id="login" style="position:fixed;inset:0;background:#fff;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
+<svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
+<h3>Fleet Maintenance — Sign in</h3><div class="mu" id="lmsg" style="margin-bottom:8px">Loading…</div>
+<div id="lform" hidden><input id="le" type="email" placeholder="Email" style="width:100%;margin-bottom:8px"><input id="lp" type="password" placeholder="Password" style="width:100%;margin-bottom:8px"><button class="p" id="lgo" style="width:100%">Sign in</button></div></div></div>
+<div class="top"><header>
+<div class="logo">
+<svg viewBox="0 0 250 34" aria-label="Rosenbauer"><text x="0" y="27" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="31" fill="#d5001c" letter-spacing="1">ROSENBAUER</text></svg>
+<div class="t"><b>Fleet Maintenance</b>Airport Service · PMIA</div></div>
+<div><span class="role" id="role">Loading…</span> <button id="so">Sign out</button> <button id="addBtn" class="p" hidden>+ Add trucks</button></div>
+</header></div>
+<main>
+<div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button></div>
+<div class="kpis" id="kpis"></div>
+
+<div id="vFleet">
+<div class="bar">
+<input type="search" id="q" placeholder="Search ID / plate / name">
+<select id="fs"><option value="">All status</option><option value="online">Online</option><option value="offline">Offline</option></select>
+<select id="fp"><option value="">All parts</option><option value="none">No parts pending</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option></select>
+</div>
+<div class="wrap"><table><thead><tr><th>Truck</th><th>Status</th><th>Odometer</th><th>Last maintenance</th><th>Spare parts</th></tr></thead><tbody id="tb"></tbody></table><div class="empty" id="empty" hidden></div></div>
+</div>
+
+<div id="vParts" hidden>
+<div class="bar"><select id="pf"><option value="open">Open requests</option><option value="">All parts</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option><option value="installed">Installed</option><option value="cancelled">Cancelled</option></select></div>
+<div class="wrap"><table><thead><tr><th>Truck</th><th>Part</th><th>Qty</th><th>Status</th><th>Requested</th><th>Last update</th></tr></thead><tbody id="pt"></tbody></table><div class="empty" id="pempty" hidden>No parts to show.</div></div>
+</div>
+</main>
+
+<dialog id="dlg"><div class="dh"><b id="dt"></b><span><button id="rb" class="p">Truck report</button> <button id="dx">Close</button></span></div><div class="db" id="dbody"></div></dialog>
+<dialog id="rdlg"><div class="dh noprint"><b>Truck report</b><span><button id="rp" class="p">Print / PDF</button> <button id="rd">Download</button> <button id="rx">Close</button></span></div><div class="db" id="rbody"></div></dialog>
+<dialog id="adlg"><div class="dh"><b>Add trucks</b><button id="ax">Close</button></div><div class="db"><div class="sec"><h3>Add one truck</h3><div id="addFields"></div><div class="row"><button class="p" id="addOne">Add truck</button></div></div><div class="sec"><h3>Bulk add (basic)</h3>
+<p class="mu" style="margin-top:0">One truck per line: <code>Fleet No, Plate, Name/Type</code> (plate and type optional).</p>
+<textarea id="bulk" rows="8" style="width:100%" placeholder="P1, 1234 ABC, Panther 6x6&#10;P2, 5678 DEF, Panther 8x8"></textarea>
+<div class="row"><button class="p" id="bulkGo">Add</button></div></div></div></dialog>
+
+<script>
+const ST={needed:["Needed","pw"],ordered:["Ordered","pw"],transit:["In transit","pb"],arrived:["Arrived","on"],installed:["Installed","pn"],cancelled:["Cancelled","pn"]};
+const OPEN=["needed","ordered","transit","arrived"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const now=()=>new Date().toISOString().slice(0,16).replace("T"," ");
+let trucks=[],canWrite=false,col=null,me="",openId=null,view="fleet",editInfo=false;
+
+const plist=t=>t.partsList||[];
+const lastMaint=t=>{const h=t.history||[];return h.length?h.map(x=>x.date).sort().pop():"—"};
+const badge=s=>`<span class="b ${ST[s][1]}">${ST[s][0]}</span>`;
+const last=p=>{const l=(p.log||[]).slice(-1)[0];return l||{}};
+
+function partsCell(t){
+ const act=plist(t).filter(p=>OPEN.includes(p.status));
+ if(!act.length)return '<span class="b pn">No parts pending</span>';
+ return OPEN.map(s=>{const n=act.filter(p=>p.status===s).length;return n?`<span class="b ${ST[s][1]}">${n} ${ST[s][0]}</span>`:""}).join("");
+}
+function render(){
+ const q=$("q").value.toLowerCase(),fs=$("fs").value,fp=$("fp").value;
+ const allParts=trucks.flatMap(t=>plist(t).map(p=>({...p,t})));
+ const c=s=>allParts.filter(p=>p.status===s).length;
+ $("kpis").innerHTML=[["Trucks",trucks.length,""],["Online",trucks.filter(t=>t.status==="online").length,""],["Offline",trucks.filter(t=>t.status==="offline").length,"r"],["Parts needed",c("needed"),"r"],["Ordered / in transit",c("ordered")+c("transit"),""],["Arrived – to fit",c("arrived"),""]].map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><small>${k[0]}</small></div>`).join("");
+ const rows=trucks.filter(t=>(!fs||t.status===fs)&&(!q||[t.fleetNo,t.plate,t.name].join(" ").toLowerCase().includes(q))&&(!fp||(fp==="none"?!plist(t).some(p=>OPEN.includes(p.status)):plist(t).some(p=>p.status===fp))));
+ $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td><b>${esc(t.fleetNo)}</b><br><span class="mu">${esc(t.plate)} ${esc(t.name)}</span></td><td><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td>${Number(t.odo||0).toLocaleString()} km</td><td>${esc(lastMaint(t))}</td><td>${partsCell(t)}</td></tr>`).join("");
+ $("empty").hidden=rows.length>0;
+ $("empty").textContent=trucks.length?"No trucks match the filters.":(canWrite?"No trucks yet — tap “Add trucks”.":"No trucks yet.");
+ const pf=$("pf").value;
+ const pr=allParts.filter(p=>pf==="open"?OPEN.includes(p.status):(!pf||p.status===pf)).sort((a,b)=>(OPEN.includes(b.status)-OPEN.includes(a.status))||String(last(b).at).localeCompare(String(last(a).at)));
+ $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td>${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td>${esc(p.qty)}</td><td>${badge(p.status)}</td><td>${esc(f.by||"")}<br><span class="mu">${esc((f.at||"").slice(0,10))}</span></td><td>${esc(l.by||"")}<br><span class="mu">${esc(l.at||"")}</span></td></tr>`}).join("");
+ $("pempty").hidden=pr.length>0;
+ if(openId&&$("dlg").open&&!editInfo){const y=$("dlg").scrollTop;detail(openId);$("dlg").scrollTop=y}
+}
+function save(t,patch){const {id,...rest}=t;return col.doc(id).set({...rest,...patch}).catch(e=>alert("Save failed: "+(e.message||e.code)))}
+
+function partCard(p,w){
+ const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(l.at)}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}</div>
+ ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
+ <div class="trail">${trail}</div></div>`;
+}
+const F=[["fleetNo","Fleet No. *"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
+function infoForm(px,t){return `<div class="fg">${F.map(([k,l,ty])=>`<label>${l}<input id="${px}${k}" type="${ty||"text"}" value="${esc(t[k])}"></label>`).join("")}<label>Tire axles<select id="${px}axles">${[2,3,4].map(n=>`<option${n==(t.axles||4)?" selected":""}>${n}</option>`).join("")}</select></label></div>`}
+function readInfo(px){const v={};F.forEach(([k])=>v[k]=$(px+k).value.trim());v.axles=+$(px+"axles").value;return v}
+function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Type",t.name],["Make",t.make],["Model",t.model],["Year",t.year],["VIN / Chassis",t.vin],["Engine No.",t.engine],["In service since",t.commissioned],["Tire axles",t.axles||4],["Notes",t.notes]];return `<div class="ig">${R.map(([l,v])=>`<div><small>${l}</small><b>${esc(v)||"—"}</b></div>`).join("")}</div>`}
+function infoSec(t,w){
+ if(editInfo&&w)return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
+ return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${w?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
+function odoPatch(t,o,src){if(!o||o===(t.odo||0))return {};return {odo:Math.max(o,t.odo||0),odoLog:[...(t.odoLog||[]),{date:today(),odo:o,src,by:me}]}}
+const axl=t=>t.axles||4;
+const desc=(a,b)=>b.date.localeCompare(a.date);
+const km=n=>Number(n).toLocaleString()+" km";
+const scopeTxt=e=>e.scope==="set"?"Whole set":"Axle "+(e.axles||[]).join(", ");
+function axleLast(t,n){return [...(t.tireLog||[])].filter(e=>e.scope==="set"||(e.axles||[]).includes(n)).sort(desc)[0]}
+function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${esc(e.date)}</b><span>${e.odo?km(e.odo):""}${e.odo&&t.odo>=e.odo?` · ${km(t.odo-e.odo)} since`:""}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
+function tireHist(t){const L=[...(t.tireLog||[])].sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div></div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)}${e.odo?" · "+km(e.odo):""} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
+function tireSec(t,w){return `<div class="sec"><h3>Tires — last replacement per axle</h3>${tireTiles(t)}
+ ${w?`<div class="row"><input type="date" id="td" value="${today()}"><input type="number" id="to" placeholder="Odometer" value="${t.odo||""}"><select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
+ <div class="row" id="tax" hidden>${Array.from({length:axl(t)},(_,i)=>`<label><input type="checkbox" id="ta${i+1}"> Axle ${i+1}</label>`).join(" ")}</div>
+ <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button data-act="tire">Log tire replacement</button></div>`:""}
+ <details style="margin-top:8px"><summary>Replacement history</summary>${tireHist(t)}</details></div>`}
+function battHist(t){const L=[...(t.batteryLog||[])].sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div></div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${e.odo?km(e.odo)+" · ":""}${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
+function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0];if(l)return `<b>Last replaced ${esc(l.date)}</b>${l.odo?` · ${km(l.odo)}${t.odo>=l.odo?" · "+km(t.odo-l.odo)+" since":""}`:""}${l.note?` <span class="mu">— ${esc(l.note)}</span>`:""}`;const g=t.battery;return g&&g.date?`<b>Last replaced ${esc(g.date)}</b> <span class="mu">${esc(g.note||"")}</span>`:'<span class="mu">No record</span>'}
+function batterySec(t,w){return `<div class="sec"><h3>Battery</h3>${battLine(t)}
+ ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input type="number" id="bo" placeholder="Odometer" value="${t.odo||""}"><input id="bn" placeholder="Notes (brand, qty…)"><button data-act="bat">Log battery replacement</button></div>`:""}
+ <details style="margin-top:8px"><summary>Replacement history</summary>${battHist(t)}</details></div>`}
+function reportHTML(t){
+ const odl=[...(t.odoLog||[])].sort((a,b)=>b.date.localeCompare(a.date)||b.odo-a.odo),hist=[...(t.history||[])].sort(desc),parts=plist(t);
+ const tb=(h,rows)=>rows.length?`<table class="rt"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`:'<div class="mu">None recorded.</div>';
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Vehicle Report — ${esc(t.fleetNo)}</h2><small class="mu">Generated ${now()}${me?" by "+esc(me):""}</small></div></div>
+ <h4>Vehicle information</h4>${infoGrid(t)}
+ <h4>Operational summary</h4><div class="ig"><div><small>Status</small><b>${t.status==="online"?"Online":"Offline"}</b></div><div><small>Current odometer</small><b>${km(t.odo||0)}</b></div><div><small>Last maintenance</small><b>${esc(lastMaint(t))}</b></div><div><small>Open part requests</small><b>${parts.filter(p=>OPEN.includes(p.status)).length}</b></div></div>
+ <h4>Odometer readings</h4>${tb(["Date","Reading","Source","By"],odl.map(o=>`<tr><td>${esc(o.date)}</td><td>${km(o.odo)}</td><td>${esc(o.src)}</td><td>${esc(o.by)}</td></tr>`))}
+ <h4>Tires — last replacement per axle</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
+ <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
+ <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(l.at)}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Maintenance history</h4>${tb(["Date","Type","Odometer","Notes","By"],hist.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.type)}</td><td>${km(h.odo||0)}</td><td>${esc(h.note)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
+function detail(id){
+ const t=trucks.find(x=>x.id===id);if(!t)return;openId=id;
+ $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
+ const w=canWrite;
+ const hist=[...(t.history||[])].sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${Number(h.odo||0).toLocaleString()} km · ${esc(h.by||"")}</small><div>${esc(h.note)}</div></div>`).join("")||'<div class="mu">No records yet.</div>';
+ const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(c.date)+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
+ const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
+ $("dbody").innerHTML=`
+ ${infoSec(t,w)}<div class="sec"><h3>Status &amp; odometer</h3><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span> <b>${Number(t.odo||0).toLocaleString()} km</b>
+ ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button data-act="sto">Update</button></div>`:""}</div>
+ <div class="sec"><h3>Spare parts</h3>
+ ${op.map(p=>partCard(p,w)).join("")||'<div class="mu">No open part requests.</div>'}
+ ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
+ ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
+ ${batterySec(t,w)}${tireSec(t,w)}
+ ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row"><input type="date" id="hd" value="${today()}"><select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select><input type="number" id="ho" placeholder="Odometer" value="${t.odo||""}"></div><div class="row"><input id="hn" placeholder="Work done / technician notes"><button class="p" data-act="hist">Save</button></div></div>`:""}
+ <div class="sec"><h3>Maintenance history</h3>${hist}</div>`;
+ if(w)$("st").value=t.status;
+ if(!$("dlg").open)$("dlg").showModal();
+}
+$("dbody").addEventListener("click",e=>{
+ const a=e.target.dataset.act;if(!a||!canWrite)return;const t=trucks.find(x=>x.id===openId);if(!t)return;
+ if(a==="sto"){const o=$("od").value;save(t,{status:$("st").value,...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
+ else if(a==="bat"){const o=+$("bo").value||0;save(t,{...odoPatch(t,o,"Battery"),batteryLog:[...(t.batteryLog||[]),{date:$("bd").value,odo:o,note:$("bn").value.trim(),by:me}]})}
+ else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");const o=+$("to").value||0;save(t,{...odoPatch(t,o,"Tires"),tireLog:[...(t.tireLog||[]),{date:$("td").value,odo:o,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
+ else if(a==="editinfo"){editInfo=true;detail(openId)}
+ else if(a==="cancelinfo"){editInfo=false;detail(openId)}
+ else if(a==="saveinfo"){const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;save(t,v)}
+ else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");const o=+$("ho").value||t.odo||0;
+  save(t,{...odoPatch(t,o,"Maintenance"),history:[...(t.history||[]),{date:$("hd").value,type:$("ht").value,note:n,odo:o,by:me}]})}
+ else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
+  const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
+  save(t,{partsList:[...plist(t),p]})}
+ else if(a==="pupd"){const id=e.target.dataset.pid,s=document.querySelector(`[data-ps="${id}"]`).value,ref=document.querySelector(`[data-pr="${id}"]`).value.trim(),note=document.querySelector(`[data-pn="${id}"]`).value.trim();
+  save(t,{partsList:plist(t).map(p=>p.id!==id?p:{...p,status:s,ref,log:(s!==p.status||note||ref!==(p.ref||""))?[...(p.log||[]),{s,by:me,at:now(),note:note||(ref!==(p.ref||"")?"Ref: "+ref:"")}]:p.log})})}
+});
+document.addEventListener("click",e=>{const r=e.target.closest("tr.r");if(r)detail(r.dataset.id)});
+$("dx").onclick=()=>{$("dlg").close();openId=null;editInfo=false};
+$("dbody").addEventListener("change",e=>{if(e.target.id==="tsc")$("tax").hidden=e.target.value==="set"});
+$("rb").onclick=()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;$("rbody").innerHTML=reportHTML(t);$("rdlg").showModal()};
+$("rx").onclick=()=>$("rdlg").close();
+$("ax").onclick=()=>$("adlg").close();
+$("rp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
+$("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);const d=await claude.use("downloads");if(!d)return alert("Download is not available — use Print.");
+ const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}";
+ try{await d.save({filename:`${t.fleetNo||"truck"}-report.html`,data:`<!DOCTYPE html><meta charset="utf-8"><title>Report ${esc(t.fleetNo)}</title><style>${css}</style>${$("rbody").innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("vFleet").hidden=view!=="fleet";$("vParts").hidden=view!=="parts"});
+["q","fs","fp","pf"].forEach(i=>$(i).addEventListener("input",render));
+$("addBtn").onclick=()=>$("adlg").showModal();
+$("addFields").innerHTML=infoForm("a",{axles:4});
+$("addOne").onclick=async()=>{const v=readInfo("a");if(!v.fleetNo)return alert("Fleet number is required.");
+ await col.doc().set({...v,status:"online",odo:0,partsList:[],batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code));
+ $("addFields").innerHTML=infoForm("a",{axles:4});$("adlg").close()};
+$("bulkGo").onclick=async()=>{
+ const lines=$("bulk").value.split("\n").map(l=>l.trim()).filter(Boolean);
+ for(const l of lines){const [f,p,n]=l.split(",").map(s=>s.trim());
+  await col.doc().set({fleetNo:f,plate:p||"",name:n||"",status:"online",odo:0,partsList:[],axles:4,batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code))}
+ $("bulk").value="";$("adlg").close();
+};
+const SUPABASE_URL="https://fsfciikyhrljgddffigt.supabase.co",SUPABASE_KEY="sb_publishable_GvekNjlp74vURcOtA2BLuA_E11NcZ8t";
+let sb=null,role=null,uname="";
+const claude={use:async n=>{
+ if(n==="db")return{collection:()=>({
+  onSnapshot(cb,err){const load=async()=>{const {data,error}=await sb.from("trucks").select("id,data");if(error){err&&err({code:error.message});return}cb({docs:data.map(r=>({id:r.id,data:()=>r.data}))})};load();sb.channel("trucks").on("postgres_changes",{event:"*",schema:"public",table:"trucks"},load).subscribe()},
+  doc(id){return{set:async d=>{const {error}=await sb.from("trucks").upsert({id:id||crypto.randomUUID(),data:d,updated_at:new Date().toISOString()});if(error)throw error}}}})};
+ if(n==="user")return{can:async()=>role==="technician",me:async()=>({name:uname})};
+ if(n==="downloads")return{save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/html"}));a.download=filename;a.click()}};
+}};
+function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("login").hidden=false}
+async function boot(){
+ if(typeof supabase==="undefined"){loginMsg("Could not load the Supabase library. Check your internet or try another network.",false);return}
+ if(SUPABASE_KEY.startsWith("PASTE")){loginMsg("Not configured yet: paste your Supabase key in index.html.",false);return}
+ sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){loginMsg("Sign in with your company account.",true);return}
+ const {data:st,error:se}=await sb.from("staff").select("name,role").eq("email",session.user.email.toLowerCase()).maybeSingle();
+ if(se){loginMsg("Database error: "+se.message,false);$("so").hidden=false;return}
+ if(!st){loginMsg("Signed in as "+session.user.email+", but this account has not been approved. Ask the administrator to add your email.",false);$("lform").hidden=true;$("so").hidden=false;return}
+ role=st.role;uname=st.name||session.user.email;$("login").hidden=true;start().catch(e=>{$("role").textContent="Error: "+(e.message||e)});
+}
+$("lgo").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("le").value.trim(),password:$("lp").value});if(error)return alert(error.message);location.reload()};
+$("lp").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgo").click()});
+$("so").onclick=async()=>{if(sb)await sb.auth.signOut();location.reload()};
+async function start(){
+ const db=await claude.use("db"),user=await claude.use("user");
+ if(!db){$("role").textContent="Sign in required";$("empty").hidden=false;$("empty").textContent="Open this page while signed in to view fleet data.";return}
+ canWrite=user?(await user.can("data.write"))!==false:false;
+ try{me=user?((await user.me()).name||""):""}catch{}
+ $("role").textContent=canWrite?"Technician (can edit)":"Management (view only)";
+ $("addBtn").hidden=!canWrite;
+ col=db.collection("trucks");
+ col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
+}
+boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
+</script></body></html>
