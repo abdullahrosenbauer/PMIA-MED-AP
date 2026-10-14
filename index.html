@@ -284,7 +284,9 @@ const isAdmin=()=>role==="admin";
 const claude={use:async n=>{
  if(n==="db")return{collection:()=>({
   onSnapshot(cb,err){const load=async()=>{const {data,error}=await sb.from("trucks").select("id,data");if(error){err&&err({code:error.message});return}cb({docs:data.map(r=>({id:r.id,data:()=>r.data}))})};load();sb.channel("trucks").on("postgres_changes",{event:"*",schema:"public",table:"trucks"},load).subscribe()},
-  doc(id){return{set:async d=>{const {error}=await sb.from("trucks").upsert({id:id||crypto.randomUUID(),data:d,updated_at:new Date().toISOString()});if(error)throw error},delete:async()=>{const {error}=await sb.from("trucks").delete().eq("id",id);if(error)throw error}}}})};
+  doc(id){return{set:async d=>{const ts=new Date().toISOString();
+   if(id){const {data,error}=await sb.from("trucks").update({data:d,updated_at:ts}).eq("id",id).select("id");if(error)throw error;if(!data||!data.length)throw new Error("You do not have permission to change this record.")}
+   else{const {error}=await sb.from("trucks").insert({data:d,updated_at:ts});if(error)throw error}},delete:async()=>{const {error}=await sb.from("trucks").delete().eq("id",id);if(error)throw error}}}})};
  if(n==="user")return{can:async()=>role==="technician"||role==="admin",me:async()=>({name:uname})};
  if(n==="downloads")return{save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/html"}));a.download=filename;a.click()}};
 }};
