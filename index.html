@@ -46,6 +46,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 .ax{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.ax>div{border:1px solid var(--bd);border-top:3px solid var(--dk);padding:8px}.ax b{display:block}.ax span{font-size:12px;color:var(--mu)}
 .row label{display:flex;align-items:center;gap:5px;font-size:14px}.row label input{flex:none;min-width:0}
 .th{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.th img{width:84px;height:84px;object-fit:cover;border:1px solid var(--bd);cursor:pointer;background:var(--gb)}
+.rep .dbtn{display:none!important}
 .rep h2{margin:0}.rep h4{margin:16px 0 6px;color:var(--pr);text-transform:uppercase;letter-spacing:.08em;font-size:12px;border-bottom:1px solid var(--bd);padding-bottom:3px}
 .rt{min-width:0;font-size:13px}.rt th{background:var(--gb);color:var(--dk)}.rt td,.rt th{padding:5px 8px}
 .rh{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:3px solid var(--pr);padding-bottom:8px}
@@ -126,7 +127,7 @@ function save(t,patch){const {id,...rest}=t;return col.doc(id).set({...rest,...p
 
 function partCard(p,w){
  const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(l.at)}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
- return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}</div>
+ return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}${delBtnId("partsList",p.id)}</div>
  ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
  <div class="trail">${trail}</div></div>`;
 }
@@ -144,13 +145,13 @@ const km=n=>Number(n).toLocaleString()+" km";
 const scopeTxt=e=>e.scope==="set"?"Whole set":"Axle "+(e.axles||[]).join(", ");
 function axleLast(t,n){return [...(t.tireLog||[])].filter(e=>e.scope==="set"||(e.axles||[]).includes(n)).sort(desc)[0]}
 function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${esc(e.date)}</b><span>${e.odo?km(e.odo):""}${e.odo&&t.odo>=e.odo?` · ${km(t.odo-e.odo)} since`:""}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
-function tireHist(t){const L=[...(t.tireLog||[])].sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div></div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)}${e.odo?" · "+km(e.odo):""} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
+function tireHist(t){const L=(t.tireLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div>${delBtn("tire",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)}${e.odo?" · "+km(e.odo):""} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("tireLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
 function tireSec(t,w){return `<div class="sec"><h3>Tires — last replacement per axle</h3>${tireTiles(t)}
  ${w?`<div class="row"><input type="date" id="td" value="${today()}"><input type="number" id="to" placeholder="Odometer" value="${t.odo||""}"><select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
  <div class="row" id="tax" hidden>${Array.from({length:axl(t)},(_,i)=>`<label><input type="checkbox" id="ta${i+1}"> Axle ${i+1}</label>`).join(" ")}</div>
  <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button data-act="tire">Log tire replacement</button></div>`:""}
  <details style="margin-top:8px"><summary>Replacement history</summary>${tireHist(t)}</details></div>`}
-function battHist(t){const L=[...(t.batteryLog||[])].sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div></div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${e.odo?km(e.odo)+" · ":""}${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
+function battHist(t){const L=(t.batteryLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div>${delBtn("battery",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${e.odo?km(e.odo)+" · ":""}${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("batteryLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
 function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0];if(l)return `<b>Last replaced ${esc(l.date)}</b>${l.odo?` · ${km(l.odo)}${t.odo>=l.odo?" · "+km(t.odo-l.odo)+" since":""}`:""}${l.note?` <span class="mu">— ${esc(l.note)}</span>`:""}`;const g=t.battery;return g&&g.date?`<b>Last replaced ${esc(g.date)}</b> <span class="mu">${esc(g.note||"")}</span>`:'<span class="mu">No record</span>'}
 function batterySec(t,w){return `<div class="sec"><h3>Battery</h3>${battLine(t)}
  ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input type="number" id="bo" placeholder="Odometer" value="${t.odo||""}"><input id="bn" placeholder="Notes (brand, qty…)"><button data-act="bat">Log battery replacement</button></div>`:""}
@@ -174,7 +175,7 @@ const pwCls=x=>x.priority==="Urgent"?"off":x.priority==="High"?"pw":"pb";
 function pendingCell(t){const o=pwOpen(t);if(!o.length)return '<span class="b pn">None</span>';const u=o.filter(x=>x.priority==="Urgent").length;return `<span class="b ${u?"off":"pw"}">${o.length} open</span>${u?`<span class="b off">${u} urgent</span>`:""}`}
 function pwCard(x,wr){
  const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(l.at)}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
- return `<div class="part"><div class="hd"><b>${esc(x.title)}</b><span><span class="b ${pwCls(x)}">${esc(x.priority)}</span><span class="b pn">${esc(x.status)}</span></span></div>
+ return `<div class="part"><div class="hd"><b>${esc(x.title)}</b><span><span class="b ${pwCls(x)}">${esc(x.priority)}</span><span class="b pn">${esc(x.status)}</span>${delBtnId("pendingWorks",x.id)}</span></div>
  ${x.desc?`<div class="mu">${esc(x.desc)}</div>`:""}
  ${wr?`<div class="row"><select data-ws="${esc(x.id)}">${PW_ST.map(v=>`<option${v===x.status?" selected":""}>${v}</option>`).join("")}</select><input data-wn="${esc(x.id)}" placeholder="Note / progress"><button data-act="wupd" data-wid="${esc(x.id)}">Update</button></div>`:""}
  <div class="trail">${trail}</div></div>`}
@@ -192,6 +193,9 @@ function sorted(a){const m=$("srt").value,nf=(x,y)=>String(x).localeCompare(Stri
  const by={fleet:(x,y)=>nf(x.fleetNo,y.fleetNo),order:(x,y)=>((+x.order||1e9)-(+y.order||1e9))||nf(x.fleetNo,y.fleetNo),odo:(x,y)=>(y.odo||0)-(x.odo||0),maint:(x,y)=>l(x).localeCompare(l(y))||nf(x.fleetNo,y.fleetNo),pend:(x,y)=>pwOpen(y).length-pwOpen(x).length||nf(x.fleetNo,y.fleetNo)};
  return [...a].sort(by[m]||by.fleet)}
 const PHB="photos",urlCache=new Map();let lbPath=null;
+const DST='padding:2px 8px;font-size:12px;color:#d5001c;border-color:#d5001c;margin-top:4px';
+const delBtn=(k,i)=>isAdmin()?`<div><button class="dbtn" data-act="dellog" data-k="${k}" data-i="${i}" style="${DST}">Delete</button></div>`:"";
+const delBtnId=(k,id)=>isAdmin()?`<button class="dbtn" data-act="dellog" data-k="${k}" data-id="${esc(id)}" style="${DST};margin-top:0">Delete</button>`:"";
 async function shrink(file,max=1280){
  const img=await new Promise((res,rej)=>{const i=new Image(),u=URL.createObjectURL(file);i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(new Error("Cannot read image "+file.name));i.src=u});
  const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
@@ -209,7 +213,7 @@ function detail(id){
  const t=trucks.find(x=>x.id===id);if(!t)return;openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
  const w=canWrite;
- const hist=[...(t.history||[])].sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${Number(h.odo||0).toLocaleString()} km · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}</div>`).join("")||'<div class="mu">No records yet.</div>';
+ const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${Number(h.odo||0).toLocaleString()} km · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
  const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(c.date)+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
@@ -233,6 +237,12 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");const o=+$("to").value||0;save(t,{...odoPatch(t,o,"Tires"),tireLog:[...(t.tireLog||[]),{date:$("td").value,odo:o,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
  else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;detail(openId)}
  else if(a==="cancelinfo"){editInfo=false;detail(openId)}
+ else if(a==="dellog"){if(!isAdmin())return;const k=e.target.dataset.k,i=e.target.dataset.i,id=e.target.dataset.id;
+  if(!confirm("Delete this entry permanently? This cannot be undone."))return;
+  if(k==="battery"||k==="tire"){save(t,{[k]:{}});return}
+  const arr=t[k]||[],del=id!==undefined?arr.find(x=>x.id===id):arr[+i];
+  if(k==="history"&&del&&del.photos&&del.photos.length)sb.storage.from(PHB).remove(del.photos);
+  save(t,{[k]:id!==undefined?arr.filter(x=>x.id!==id):arr.filter((_,j)=>j!==+i)})}
  else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{const ps=(t.history||[]).flatMap(h=>h.photos||[]);if(ps.length)sb.storage.from(PHB).remove(ps);trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
  else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
@@ -261,7 +271,7 @@ $("ax").onclick=()=>$("adlg").close();
 $("rp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
 $("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);const d=await claude.use("downloads");
  const box=$("rbody").cloneNode(true);for(const im of box.querySelectorAll("img[data-ph]")){try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b)})}catch(e){}}if(!d)return alert("Download is not available — use Print.");
- const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:130px;height:130px;object-fit:cover}";
+ const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:130px;height:130px;object-fit:cover}.dbtn{display:none}";
  try{await d.save({filename:`${t.fleetNo||"truck"}-report.html`,data:`<!DOCTYPE html><meta charset="utf-8"><title>Report ${esc(t.fleetNo)}</title><style>${css}</style>${box.innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("vFleet").hidden=view!=="fleet";$("vParts").hidden=view!=="parts"});
 try{$("srt").value=localStorage.getItem("srt")||"fleet"}catch(e){}
