@@ -232,7 +232,7 @@ const claude={use:async n=>{
  if(n==="user")return{can:async()=>role==="technician",me:async()=>({name:uname})};
  if(n==="downloads")return{save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/html"}));a.download=filename;a.click()}};
 }};
-function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("login").hidden=false}
+function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("login").style.display="flex"}
 async function boot(){
  if(typeof supabase==="undefined"){loginMsg("Could not load the Supabase library. Check your internet or try another network.",false);return}
  if(SUPABASE_KEY.startsWith("PASTE")){loginMsg("Not configured yet: paste your Supabase key in index.html.",false);return}
@@ -244,7 +244,7 @@ async function boot(){
  const {data:st,error:se}=await sb.from("staff").select("name,role").eq("email",session.user.email.toLowerCase()).maybeSingle();
  if(se){loginMsg("Database error: "+se.message,false);$("so").hidden=false;return}
  if(!st){loginMsg("Signed in as "+session.user.email+", but this account has not been approved. Ask the administrator to add your email.",false);$("lform").hidden=true;$("so").hidden=false;return}
- role=st.role;uname=st.name||session.user.email;$("login").hidden=true;start().catch(e=>{$("role").textContent="Error: "+(e.message||e)});
+ role=st.role;uname=st.name||session.user.email;$("login").style.display="none";start().catch(e=>{$("role").textContent="Error: "+(e.message||e)});
 }
 $("lgo").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("le").value.trim(),password:$("lp").value});if(error)return alert(error.message);location.reload()};
 $("lp").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgo").click()});
