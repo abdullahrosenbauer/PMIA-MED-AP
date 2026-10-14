@@ -111,7 +111,7 @@ function render(){
  const c=s=>allParts.filter(p=>p.status===s).length;
  $("kpis").innerHTML=[["Trucks",trucks.length,""],["Online",trucks.filter(t=>t.status==="online").length,""],["Offline",trucks.filter(t=>t.status==="offline").length,"r"],["Parts needed",c("needed"),"r"],["Ordered / in transit",c("ordered")+c("transit"),""],["Arrived – to fit",c("arrived"),""],["Open pending works",trucks.reduce((n,t)=>n+pwOpen(t).length,0),"r"]].map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><small>${k[0]}</small></div>`).join("");
  const rows=sorted(trucks).filter(t=>(!fs||t.status===fs)&&(!q||[t.fleetNo,t.plate,t.name].join(" ").toLowerCase().includes(q))&&(!fp||(fp==="none"?!plist(t).some(p=>OPEN.includes(p.status)):plist(t).some(p=>p.status===fp))));
- $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td><b>${esc(t.fleetNo)}</b><br><span class="mu">${esc(t.plate)} ${esc(t.name)}</span></td><td><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td>${Number(t.odo||0).toLocaleString()} km</td><td>${esc(lastMaint(t))}</td><td>${partsCell(t)}</td><td>${pendingCell(t)}</td></tr>`).join("");
+ $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${esc(t.plate)} ${esc(t.name)}</span></td><td><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td>${Number(t.odo||0).toLocaleString()} km</td><td>${esc(lastMaint(t))}</td><td>${partsCell(t)}</td><td>${pendingCell(t)}</td></tr>`).join("");
  $("empty").hidden=rows.length>0;
  $("empty").textContent=trucks.length?"No trucks match the filters.":(canWrite?"No trucks yet — tap “Add trucks”.":"No trucks yet.");
  const pf=$("pf").value;
@@ -128,13 +128,13 @@ function partCard(p,w){
  ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
  <div class="trail">${trail}</div></div>`;
 }
-const F=[["fleetNo","Fleet No. *"],["order","Order no. (for sorting)","number"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
+const F=[["fleetNo","Fleet No. *"],["order","List position (1 = first)","number"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
 function infoForm(px,t){return `<div class="fg">${F.map(([k,l,ty])=>`<label>${l}<input id="${px}${k}" type="${ty||"text"}" value="${esc(t[k])}"></label>`).join("")}<label>Tire axles<select id="${px}axles">${[2,3,4].map(n=>`<option${n==(t.axles||4)?" selected":""}>${n}</option>`).join("")}</select></label></div>`}
 function readInfo(px){const v={};F.forEach(([k])=>v[k]=$(px+k).value.trim());v.axles=+$(px+"axles").value;return v}
 function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Type",t.name],["Make",t.make],["Model",t.model],["Year",t.year],["VIN / Chassis",t.vin],["Engine No.",t.engine],["In service since",t.commissioned],["Tire axles",t.axles||4],["Notes",t.notes]];return `<div class="ig">${R.map(([l,v])=>`<div><small>${l}</small><b>${esc(v)||"—"}</b></div>`).join("")}</div>`}
 function infoSec(t,w){
- if(editInfo&&w)return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
- return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${w?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
+ if(editInfo&&isAdmin())return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
+ return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${isAdmin()?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
 function odoPatch(t,o,src){if(!o||o===(t.odo||0))return {};return {odo:Math.max(o,t.odo||0),odoLog:[...(t.odoLog||[]),{date:today(),odo:o,src,by:me}]}}
 const axl=t=>t.axles||4;
 const desc=(a,b)=>b.date.localeCompare(a.date);
@@ -180,6 +180,12 @@ function pendingSec(t,w){const op=pwOpen(t),cl=pwl(t).filter(x=>!op.includes(x))
  return `<div class="sec"><h3>Pending works${op.length?` (${op.length} open)`:""}</h3>${op.map(x=>pwCard(x,w)).join("")||'<div class="mu">No pending works.</div>'}
  ${cl.length?`<details><summary>Closed (${cl.length}) – done / cancelled</summary>${cl.map(x=>pwCard(x,w)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="wt" placeholder="Pending work (e.g. replace hydraulic hose)" style="flex:2"><select id="wp">${PW_PR.map(p=>`<option${p==="Normal"?" selected":""}>${p}</option>`).join("")}</select><input id="wd" placeholder="Details (optional)" style="flex:2"><button class="p" data-act="wadd">Add pending work</button></div>`:""}</div>`}
+const nfx=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
+function orderedList(){return [...trucks].sort((x,y)=>((+x.order||1e9)-(+y.order||1e9))||nfx(x.fleetNo,y.fleetNo))}
+function applyOrder(list){list.forEach((z,i)=>{if(+z.order!==i+1)save(z,{order:i+1})})}
+function moveTruck(id,d){const l=orderedList(),i=l.findIndex(z=>z.id===id),j=i+d;if(i<0||j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];applyOrder(l)}
+function mvBtns(t){if($("srt").value!=="order")return "";const f=!$("q").value&&!$("fs").value&&!$("fp").value;
+ return `<span class="b pn">#${t.order||"–"}</span> `+(canWrite&&f?`<button data-mv="${esc(t.id)}" data-d="-1" style="padding:1px 8px">▲</button><button data-mv="${esc(t.id)}" data-d="1" style="padding:1px 8px;margin-right:6px">▼</button>`:"")}
 function sorted(a){const m=$("srt").value,nf=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
  const l=t=>{const v=lastMaint(t);return v==="—"?"":v};
  const by={fleet:(x,y)=>nf(x.fleetNo,y.fleetNo),order:(x,y)=>((+x.order||1e9)-(+y.order||1e9))||nf(x.fleetNo,y.fleetNo),odo:(x,y)=>(y.odo||0)-(x.odo||0),maint:(x,y)=>l(x).localeCompare(l(y))||nf(x.fleetNo,y.fleetNo),pend:(x,y)=>pwOpen(y).length-pwOpen(x).length||nf(x.fleetNo,y.fleetNo)};
@@ -210,12 +216,14 @@ $("dbody").addEventListener("click",e=>{
  if(a==="sto"){const o=$("od").value;save(t,{status:$("st").value,...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
  else if(a==="bat"){const o=+$("bo").value||0;save(t,{...odoPatch(t,o,"Battery"),batteryLog:[...(t.batteryLog||[]),{date:$("bd").value,odo:o,note:$("bn").value.trim(),by:me}]})}
  else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");const o=+$("to").value||0;save(t,{...odoPatch(t,o,"Tires"),tireLog:[...(t.tireLog||[]),{date:$("td").value,odo:o,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
- else if(a==="editinfo"){editInfo=true;detail(openId)}
+ else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;detail(openId)}
  else if(a==="cancelinfo"){editInfo=false;detail(openId)}
  else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
  else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
- else if(a==="saveinfo"){const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;save(t,v)}
+ else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;const pos=parseInt(v.order);
+  if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
+  else save(t,{...v,order:""})}
  else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");const o=+$("ho").value||t.odo||0;
   save(t,{...odoPatch(t,o,"Maintenance"),history:[...(t.history||[]),{date:$("hd").value,type:$("ht").value,note:n,odo:o,by:me}]})}
  else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
@@ -224,7 +232,7 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="pupd"){const id=e.target.dataset.pid,s=document.querySelector(`[data-ps="${id}"]`).value,ref=document.querySelector(`[data-pr="${id}"]`).value.trim(),note=document.querySelector(`[data-pn="${id}"]`).value.trim();
   save(t,{partsList:plist(t).map(p=>p.id!==id?p:{...p,status:s,ref,log:(s!==p.status||note||ref!==(p.ref||""))?[...(p.log||[]),{s,by:me,at:now(),note:note||(ref!==(p.ref||"")?"Ref: "+ref:"")}]:p.log})})}
 });
-document.addEventListener("click",e=>{const r=e.target.closest("tr.r");if(r)detail(r.dataset.id)});
+document.addEventListener("click",e=>{const m=e.target.closest("[data-mv]");if(m){moveTruck(m.dataset.mv,+m.dataset.d);return}const r=e.target.closest("tr.r");if(r)detail(r.dataset.id)});
 $("dx").onclick=()=>{$("dlg").close();openId=null;editInfo=false};
 $("dbody").addEventListener("change",e=>{if(e.target.id==="tsc")$("tax").hidden=e.target.value==="set"});
 $("rb").onclick=()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;$("rbody").innerHTML=reportHTML(t);$("rdlg").showModal()};
@@ -241,7 +249,7 @@ $("srt").addEventListener("input",()=>{try{localStorage.setItem("srt",$("srt").v
 $("addBtn").onclick=()=>$("adlg").showModal();
 $("addFields").innerHTML=infoForm("a",{axles:4});
 $("addOne").onclick=async()=>{const v=readInfo("a");if(!v.fleetNo)return alert("Fleet number is required.");
- await col.doc().set({...v,status:"online",odo:0,partsList:[],batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code));
+ await col.doc().set({...v,order:v.order||String(Math.max(0,...trucks.map(t=>+t.order||0))+1),status:"online",odo:0,partsList:[],batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code));
  $("addFields").innerHTML=infoForm("a",{axles:4});$("adlg").close()};
 $("bulkGo").onclick=async()=>{
  const lines=$("bulk").value.split("\n").map(l=>l.trim()).filter(Boolean);
