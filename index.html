@@ -47,10 +47,11 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 .row label{display:flex;align-items:center;gap:5px;font-size:14px}.row label input{flex:none;min-width:0}
 .th{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.th img{width:84px;height:84px;object-fit:cover;border:1px solid var(--bd);cursor:pointer;background:var(--gb)}
 .rep .dbtn{display:none!important}
+.rep .dg td{background:var(--gb);font-weight:700;color:var(--dk)}.rt td{vertical-align:top}
 .rep h2{margin:0}.rep h4{margin:16px 0 6px;color:var(--pr);text-transform:uppercase;letter-spacing:.08em;font-size:12px;border-bottom:1px solid var(--bd);padding-bottom:3px}
 .rt{min-width:0;font-size:13px}.rt th{background:var(--gb);color:var(--dk)}.rt td,.rt th{padding:5px 8px}
 .rh{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:3px solid var(--pr);padding-bottom:8px}
-@media print{.top,main,#dlg,#adlg,.noprint{display:none!important}#rdlg{position:static;width:100%;max-height:none;box-shadow:none;border:0;overflow:visible}#rdlg .db{background:#fff}}
+@media print{.top,main,#dlg,#adlg,.noprint{display:none!important}#rdlg,#actdlg{position:static;width:100%;max-height:none;box-shadow:none;border:0;overflow:visible}#rdlg .db,#actdlg .db{background:#fff}}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:#fff;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -64,6 +65,9 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 </header></div>
 <main>
 <div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button></div>
+<div class="sec" style="margin-bottom:14px"><h3>Activity report (all trucks)</h3><div class="row" style="margin-top:0">
+<button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button>
+<span class="mu">Custom:</span><input type="date" id="arf" style="flex:0 1 150px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 150px"><button class="p" id="arc">Create report</button></div></div>
 <div class="kpis" id="kpis"></div>
 
 <div id="vFleet">
@@ -83,6 +87,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 
 <dialog id="dlg"><div class="dh"><b id="dt"></b><span><button id="rb" class="p">Truck report</button> <button id="dx">Close</button></span></div><div class="db" id="dbody"></div></dialog>
 <dialog id="rdlg"><div class="dh noprint"><b>Truck report</b><span><button id="rp" class="p">Print / PDF</button> <button id="rd">Download</button> <button id="rx">Close</button></span></div><div class="db" id="rbody"></div></dialog>
+<dialog id="actdlg"><div class="dh noprint"><b>Activity report</b><span><button id="actp" class="p">Print / PDF</button> <button id="actd">Download</button> <button id="actx">Close</button></span></div><div class="db" id="actbody"></div></dialog>
 <dialog id="ldlg" style="width:min(900px,96vw)"><div class="dh"><b>Photo</b><span><button id="ldel" hidden style="color:#d5001c;border-color:#d5001c">Delete photo</button> <button id="lx">Close</button></span></div><div class="db" style="text-align:center"><img id="limg" alt="" style="max-width:100%;max-height:75vh"></div></dialog>
 <dialog id="adlg"><div class="dh"><b>Add trucks</b><button id="ax">Close</button></div><div class="db"><div class="sec"><h3>Add one truck</h3><div id="addFields"></div><div class="row"><button class="p" id="addOne">Add truck</button></div></div><div class="sec"><h3>Bulk add (basic)</h3>
 <p class="mu" style="margin-top:0">One truck per line: <code>Fleet No, Plate, Name/Type</code> (plate and type optional).</p>
@@ -209,6 +214,26 @@ async function loadPhotos(root){const imgs=[...root.querySelectorAll("img[data-p
  if(need.length){const {data,error}=await sb.storage.from(PHB).createSignedUrls(need,3600);if(!error&&data)data.forEach(d=>{if(d.signedUrl)urlCache.set(d.path,{url:d.signedUrl,exp:Date.now()+3300000})})}
  imgs.forEach(i=>{const c=urlCache.get(i.dataset.ph);if(c)i.src=c.url})}
 const phHTML=(h,big)=>(h.photos&&h.photos.length)?`<div class="th">${h.photos.map(p=>`<img data-ph="${esc(p)}" alt="photo"${big?' style="width:130px;height:130px"':""}>`).join("")}</div>`:"";
+function collectActivity(from,to){
+ const A=[],inr=d=>d&&d>=from&&d<=to,od=e=>e.odo?" · "+km(e.odo):"";
+ trucks.forEach(t=>{
+  (t.history||[]).forEach(h=>{if(inr(h.date))A.push({d:h.date,tm:"",t:t.fleetNo,c:"Maintenance",a:h.type,x:(h.note||"")+od(h)+(h.photos&&h.photos.length?" · "+h.photos.length+" photo(s)":""),by:h.by})});
+  (t.batteryLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Battery",a:"Battery replaced",x:(e.note||"")+od(e),by:e.by})});
+  (t.tireLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Tires",a:"Tires replaced – "+scopeTxt(e),x:(e.note||"")+od(e),by:e.by})});
+  plist(t).forEach(p=>(p.log||[]).forEach((l,i)=>{const d=(l.at||"").slice(0,10);if(inr(d))A.push({d,tm:(l.at||"").slice(11),t:t.fleetNo,c:"Spare part",a:(i===0?"Part requested":"Part status: "+ST[l.s][0])+" – "+p.name+" × "+p.qty,x:[l.note,i>0&&p.ref?"Ref: "+p.ref:""].filter(Boolean).join(" · "),by:l.by})}));
+  pwl(t).forEach(w=>(w.log||[]).forEach((l,i)=>{const d=(l.at||"").slice(0,10);if(inr(d))A.push({d,tm:(l.at||"").slice(11),t:t.fleetNo,c:"Pending work",a:(i===0?"Pending work added ("+w.priority+")":"Pending work status: "+l.s)+" – "+w.title,x:l.note||(i===0?w.desc||"":""),by:l.by})}));
+ });
+ return A.sort((a,b)=>b.d.localeCompare(a.d)||String(b.tm).localeCompare(String(a.tm))||nfx(a.t,b.t))}
+function actHTML(from,to,A){
+ const fd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+ const C={Maintenance:"pb",Battery:"on",Tires:"pn","Spare part":"pw","Pending work":"off"};
+ const cnt=c=>A.filter(x=>x.c===c).length;let rows="",last="";
+ A.forEach(x=>{if(x.d!==last){last=x.d;rows+=`<tr class="dg"><td colspan="5">${fd(x.d)}</td></tr>`}
+  rows+=`<tr><td><b>${esc(x.t)}</b></td><td><span class="b ${C[x.c]}">${x.c}</span></td><td>${esc(x.a)}</td><td>${esc(x.x)}</td><td>${esc(x.by)}${x.tm?`<br><span class="mu">${esc(x.tm)}</span>`:""}</td></tr>`});
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Activity Report</h2><small class="mu">${fd(from)} – ${fd(to)} · Generated ${now()}${me?" by "+esc(me):""}</small></div></div>
+ <h4>Summary</h4><div class="ig"><div><small>Total activities</small><b>${A.length}</b></div><div><small>Trucks involved</small><b>${new Set(A.map(x=>x.t)).size}</b></div>${Object.keys(C).map(c=>`<div><small>${c}</small><b>${cnt(c)}</b></div>`).join("")}</div>
+ <h4>Activities (newest first)</h4>${A.length?`<table class="rt"><thead><tr><th>Truck</th><th>Type</th><th>Activity</th><th>Details</th><th>Logged by</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="mu">No activity was logged in this period.</div>'}</div>`}
+function showActivity(from,to){$("actbody").innerHTML=actHTML(from,to,collectActivity(from,to));$("actdlg").showModal()}
 function detail(id){
  const t=trucks.find(x=>x.id===id);if(!t)return;openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
@@ -262,6 +287,13 @@ $("dx").onclick=()=>{$("dlg").close();openId=null;editInfo=false};
 $("dbody").addEventListener("change",e=>{if(e.target.id==="tsc")$("tax").hidden=e.target.value==="set"});
 $("rb").onclick=()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;$("rbody").innerHTML=reportHTML(t);$("rdlg").showModal();loadPhotos($("rbody"))};
 $("rx").onclick=()=>$("rdlg").close();
+document.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>{const n=+b.dataset.ar,to=today(),d=new Date(to+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-(n-1));showActivity(d.toISOString().slice(0,10),to)});
+$("arc").onclick=()=>{const f=$("arf").value,t=$("art").value;if(!f||!t)return alert("Choose both a start date and an end date.");if(f>t)return alert("The start date must be before the end date.");showActivity(f,t)};
+$("actx").onclick=()=>$("actdlg").close();
+$("actp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
+$("actd").onclick=async()=>{const d=await claude.use("downloads");if(!d)return alert("Download is not available — use Print.");
+ const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:5px 8px;text-align:left;font-size:13px;vertical-align:top}th{background:#f2f2f3}.dg td{background:#e8e8e8;font-weight:bold}.ig{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.mu{color:#777}.b{padding:1px 6px;font-weight:bold;font-size:12px}.pb{background:#e4eefb;color:#1d5fb8}.on{background:#e5f4ea;color:#1a7f37}.pw{background:#fff1d6;color:#9a5b00}.off{background:#fde8ea;color:#d5001c}.pn{background:#f2f2f3;color:#6b6f76}.rh{display:flex;justify-content:space-between;border-bottom:3px solid #d5001c;padding-bottom:8px}";
+ try{await d.save({filename:"Activity-report-"+today()+".html",data:`<!DOCTYPE html><meta charset="utf-8"><title>Activity report</title><style>${css}</style>${$("actbody").innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
 document.addEventListener("click",e=>{const im=e.target.closest("img[data-ph]");if(!im||!im.src)return;lbPath=im.dataset.ph;$("limg").src=im.src;$("ldel").hidden=!(isAdmin()&&openId&&$("dlg").open&&!$("rdlg").open);$("ldlg").showModal()});
 $("lx").onclick=()=>$("ldlg").close();
 $("ldel").onclick=async()=>{if(!isAdmin()||!lbPath||!confirm("Delete this photo permanently?"))return;const t=trucks.find(x=>x.id===openId);if(!t)return;
