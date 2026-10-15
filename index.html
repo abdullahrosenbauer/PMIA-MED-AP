@@ -362,7 +362,7 @@ async function start(){
  if(!db){$("role").textContent="Sign in required";$("empty").hidden=false;$("empty").textContent="Open this page while signed in to view fleet data.";return}
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
- $("role").textContent=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)";
+ {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
  $("addBtn").hidden=!isAdmin();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
