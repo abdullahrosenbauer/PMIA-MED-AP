@@ -18,7 +18,7 @@ main{max-width:1100px;margin:0 auto;padding:14px}
 .tab{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:9px 16px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--mu);border-radius:0}
 .tab.on{color:var(--pr);border-bottom-color:var(--pr)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--bd);border-top:3px solid var(--dk);padding:10px 12px}.kpi.r{border-top-color:var(--pr)}.kpi b{font-size:26px;display:block;line-height:1.1}.kpi small{color:var(--mu);text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.kpi{background:var(--card);border:1px solid var(--bd);border-top:3px solid var(--pr);padding:10px 12px}.kpi.r{border-top-color:var(--pr)}.kpi b{font-size:26px;display:block;line-height:1.1}.kpi small{color:var(--mu);text-transform:uppercase;font-size:11px;letter-spacing:.06em}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 input,select,textarea,button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--inb);border-radius:3px;padding:8px 10px}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--pr);outline-offset:-1px}
@@ -34,7 +34,7 @@ dialog{border:0;border-top:5px solid var(--pr);background:var(--card);color:var(
 dialog::backdrop{background:rgba(0,0,0,.5)}
 .dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--card);z-index:2}.dh b{font-size:17px}
 .db{padding:14px;background:var(--gb)}.sec{background:var(--card);border:1px solid var(--bd);padding:12px;margin-bottom:12px}
-.sec h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--pr)}
+.sec h3{margin:0 0 10px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--pr)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}.row input,.row select{flex:1;min-width:110px}.row input.sm{flex:0 0 80px;min-width:70px}
 .h{border-left:3px solid var(--pr);padding:3px 10px;margin:8px 0}.h small{color:var(--mu)}
 .part{border:1px solid var(--bd);border-left:4px solid var(--dk);padding:10px;margin-bottom:10px}
@@ -159,15 +159,15 @@ const daysSince=d=>Math.round((new Date(today()+"T00:00:00Z")-new Date(d+"T00:00
 const dTxt=n=>n<=0?"Today":n===1?"1 day":n+" days";
 function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${dTxt(daysSince(e.date))}</b><span>since ${esc(e.date)}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
 function tireHist(t){const L=(t.tireLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div>${delBtn("tire",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("tireLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
-function tireSec(t,w){return `<div class="sec"><h3>Tires — days since last replacement (per axle)</h3>${tireTiles(t)}
+function tireSec(t,w){return `<div class="sec"><h3>Tires</h3>${tireTiles(t)}
  ${w?`<div class="row"><input type="date" id="td" value="${today()}"><select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
  <div class="row" id="tax" hidden>${Array.from({length:axl(t)},(_,i)=>`<label><input type="checkbox" id="ta${i+1}"> Axle ${i+1}</label>`).join(" ")}</div>
- <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button data-act="tire">Log tire replacement</button></div>`:""}
+ <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button class="p" data-act="tire">Log tire replacement</button></div>`:""}
  <details style="margin-top:8px"><summary>Replacement history</summary>${tireHist(t)}</details></div>`}
 function battHist(t){const L=(t.batteryLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div>${delBtn("battery",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("batteryLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
 function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);if(!l)return '<span class="mu">No record</span>';return `<span style="font-size:22px;font-weight:700">${dTxt(daysSince(l.date))}</span> <span class="mu">since last replacement · ${esc(l.date)}${l.note?" — "+esc(l.note):""}</span>`}
 function batterySec(t,w){return `<div class="sec"><h3>Battery</h3>${battLine(t)}
- ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input id="bn" placeholder="Notes (brand, qty…)"><button data-act="bat">Log battery replacement</button></div>`:""}
+ ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input id="bn" placeholder="Notes (brand, qty…)"><button class="p" data-act="bat">Log battery replacement</button></div>`:""}
  <details style="margin-top:8px"><summary>Replacement history</summary>${battHist(t)}</details></div>`}
 function reportHTML(t){
  const odl=[...(t.odoLog||[])].sort((a,b)=>b.date.localeCompare(a.date)||b.odo-a.odo),hist=[...(t.history||[])].sort(desc),parts=plist(t);
@@ -176,7 +176,7 @@ function reportHTML(t){
  <h4>Vehicle information</h4>${infoGrid(t)}
  <h4>Operational summary</h4><div class="ig"><div><small>Status</small><b>${t.status==="online"?"Online":"Offline"}</b></div><div><small>Current odometer</small><b>${km(t.odo||0)}</b></div><div><small>Last maintenance</small><b>${esc(lastMaint(t))}</b></div><div><small>Open part requests</small><b>${parts.filter(p=>OPEN.includes(p.status)).length}</b></div></div>
  <h4>Odometer readings</h4>${tb(["Date","Reading","Source","By"],odl.map(o=>`<tr><td>${esc(o.date)}</td><td>${km(o.odo)}</td><td>${esc(o.src)}</td><td>${esc(o.by)}</td></tr>`))}
- <h4>Tires — days since last replacement (per axle)</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
+ <h4>Tires</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
  <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
  <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(l.at)}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
  <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(l.at)}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
@@ -251,7 +251,7 @@ function detail(id){
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
  ${infoSec(t,w)}<div class="sec"><h3>Status &amp; odometer</h3><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span> <b>${Number(t.odo||0).toLocaleString()} km</b>
- ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button data-act="sto">Update</button></div>`:""}</div>
+ ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button class="p" data-act="sto">Update</button></div>`:""}</div>
  <div class="sec"><h3>Spare parts</h3>
  ${op.map(p=>partCard(p,w)).join("")||'<div class="mu">No open part requests.</div>'}
  ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
