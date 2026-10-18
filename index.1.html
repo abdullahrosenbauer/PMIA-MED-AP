@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fleet Maintenance Live Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#fff;--card:#fff;--inb:#c4c6cb;--hov:#fafafa;--pr:#d5001c;--dk:#2b2b2b;--tx:#222;--mu:#6b6f76;--bd:#dcdde0;--gb:#f2f2f3;--ok:#1a7f37;--okb:#e5f4ea;--bad:#d5001c;--badb:#fde8ea;--wa:#9a5b00;--wab:#fff1d6;--bl:#1d5fb8;--blb:#e4eefb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+.top{border-top:5px solid var(--pr);border-bottom:1px solid var(--bd);background:var(--card)}
+header{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px}
+.logo{display:flex;align-items:center;gap:12px}.logo svg{height:30px;width:auto}
+.logo .t{border-left:2px solid var(--bd);padding-left:12px;font-size:12px;line-height:1.2;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}.logo .t b{display:block;color:var(--tx);font-size:14px}
+.role{font-size:12px;padding:3px 10px;background:var(--gb);color:var(--tx);border-left:3px solid var(--pr)}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--bd);margin-bottom:14px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:9px 16px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--mu);border-radius:0}
+.tab.on{color:var(--pr);border-bottom-color:var(--pr)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--bd);border-top:3px solid var(--pr);padding:10px 12px}.kpi.r{border-top-color:var(--pr)}.kpi b{font-size:26px;display:block;line-height:1.1}.kpi small{color:var(--mu);text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--inb);border-radius:3px;padding:8px 10px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--pr);outline-offset:-1px}
+input[type=search]{flex:1;min-width:150px}
+button{cursor:pointer;font-weight:600}button.p{background:var(--pr);color:#fff;border-color:var(--pr)}button.p:hover{background:#b30018}
+.wrap{overflow-x:auto;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:11px;color:#fff;background:var(--dk);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}tr.r{cursor:pointer}tr.r:hover td{background:var(--hov)}tr:last-child td{border-bottom:0}
+.b{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:2px;margin:1px 2px 1px 0;white-space:nowrap}
+.on{background:var(--okb);color:var(--ok)}.off{background:var(--badb);color:var(--bad)}.pn{background:var(--gb);color:var(--mu)}.pw{background:var(--wab);color:var(--wa)}.pb{background:var(--blb);color:var(--bl)}
+.empty{padding:30px;text-align:center;color:var(--mu)}.mu{color:var(--mu)}
+dialog{border:0;border-top:5px solid var(--pr);background:var(--card);color:var(--tx);width:min(760px,96vw);max-height:92vh;padding:0;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--card);z-index:2}.dh b{font-size:17px}
+.db{padding:14px;background:var(--gb)}.sec{background:var(--card);border:1px solid var(--bd);padding:12px;margin-bottom:12px}
+.sec h3{margin:0 0 10px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--pr)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}.row input,.row select{flex:1;min-width:110px}.row input.sm{flex:0 0 80px;min-width:70px}
+.h{border-left:3px solid var(--pr);padding:3px 10px;margin:8px 0}.h small{color:var(--mu)}
+.part{border:1px solid var(--bd);border-left:4px solid var(--dk);padding:10px;margin-bottom:10px}
+.part .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.trail{margin-top:8px;font-size:12.5px;color:var(--mu);border-top:1px dashed var(--bd);padding-top:6px}.trail div{padding:1px 0}
+details summary{cursor:pointer;font-size:12px;color:var(--mu)}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.fg label{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;display:flex;flex-direction:column;gap:3px}.fg input,.fg select{font-size:15px;text-transform:none;letter-spacing:0}
+.ig{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px}.ig small,.ax small{display:block;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.ig b{font-weight:600;word-break:break-word}
+.ax{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.ax>div{border:1px solid var(--bd);border-top:3px solid var(--dk);padding:8px}.ax b{display:block;font-size:20px;line-height:1.25}.ax span{font-size:12px;color:var(--mu)}
+.row label{display:flex;align-items:center;gap:5px;font-size:14px}.row label input{flex:none;min-width:0}
+.th{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.th img{width:84px;height:84px;object-fit:cover;border:1px solid var(--bd);cursor:pointer;background:var(--gb)}
+@media screen{:root[data-theme="dark"]{color-scheme:dark;--bg:#14171b;--card:#1d2127;--inb:#475059;--hov:#232830;--pr:#e5233b;--dk:#3b414a;--tx:#e8eaed;--mu:#9aa1ab;--bd:#323840;--gb:#262b32;--ok:#4cc27a;--okb:#12301f;--bad:#ff7a8a;--badb:#3b1a1d;--wa:#f0b35a;--wab:#3a2b10;--bl:#8cb8ff;--blb:#172a44}}
+.rep .dbtn{display:none!important}
+.rep .dg td{background:var(--gb);font-weight:700;color:var(--tx)}.rt td{vertical-align:top}
+.rep h2{margin:0}.rep h4{margin:16px 0 6px;color:var(--pr);text-transform:uppercase;letter-spacing:.08em;font-size:12px;border-bottom:1px solid var(--bd);padding-bottom:3px}
+.rt{min-width:0;font-size:13px}.rt th{background:var(--gb);color:var(--tx)}.rt td,.rt th{padding:5px 8px}
+.rh{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:3px solid var(--pr);padding-bottom:8px}
+@media print{.top,main,#dlg,#adlg,.noprint{display:none!important}#rdlg,#actdlg{position:static;width:100%;max-height:none;box-shadow:none;border:0;overflow:visible}#rdlg .db,#actdlg .db{background:#fff}}
+
+@media (max-width:700px){
+ header{padding:10px 12px;gap:8px}
+ .logo svg{height:22px}.logo .t{font-size:10px;padding-left:8px}.logo .t b{font-size:12px}
+ header>div:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%}
+ .role{flex:1 1 100%;font-size:13px}
+ main{padding:10px}
+ .tabs{overflow-x:auto}.tab{padding:9px 12px;font-size:12px;white-space:nowrap}
+ .kpis{grid-template-columns:repeat(2,1fr);gap:8px}.kpi b{font-size:22px}
+ .bar>*{flex:1 1 100%!important;min-width:0}
+ input,select,textarea{font-size:16px}button,input,select{min-height:44px}
+ .row{gap:8px}.row>input,.row>select,.row>button{flex:1 1 100%!important;min-width:0!important}
+ .wrap{border:0;overflow:visible}
+ table.cards{display:block;min-width:0}table.cards thead{display:none}table.cards tbody{display:block}
+ table.cards tr{display:block;border:1px solid var(--bd);border-top:3px solid var(--pr);background:var(--card);margin-bottom:10px;padding:2px 0 6px}
+ table.cards td{display:inline-block;width:50%;vertical-align:top;border:0;padding:6px 12px;white-space:normal}
+ table.cards td::before{content:attr(data-l);display:block;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+ table.cards td:first-child{display:block;width:100%;font-size:17px;border-bottom:1px solid var(--bd);margin-bottom:4px}
+ table.cards td:first-child::before{content:none}
+ table.cards td[data-l="Part"]{width:100%}
+ dialog{width:100vw!important;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-top-width:4px}
+ .dh{flex-wrap:wrap;gap:8px;padding:10px 12px}.dh b{font-size:16px}
+ .db{padding:10px}
+ .rep{overflow-x:auto}
+ .ax{grid-template-columns:repeat(2,1fr)}
+}
+</style></head><body>
+<div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
+<svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
+<h3>Fleet Maintenance — Sign in</h3><div class="mu" id="lmsg" style="margin-bottom:8px">Loading…</div>
+<div id="lform" hidden><input id="le" type="email" placeholder="Email" style="width:100%;margin-bottom:8px"><input id="lp" type="password" placeholder="Password" style="width:100%;margin-bottom:8px"><button class="p" id="lgo" style="width:100%">Sign in</button></div></div></div>
+<div class="top"><header>
+<div class="logo">
+<svg viewBox="0 0 250 34" aria-label="Rosenbauer"><text x="0" y="27" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="31" fill="#d5001c" letter-spacing="1">ROSENBAUER</text></svg>
+<div class="t"><b>Fleet Maintenance Live Dashboard</b>Airport Service · Medina Airport · PMIA</div></div>
+<div><span class="role" id="role">Loading…</span> <button id="thm"></button> <button id="so">Sign out</button> <button id="addBtn" class="p" hidden>+ Add trucks</button></div>
+</header></div>
+<main>
+<div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button><button class="tab" data-v="reports">Reports</button></div>
+<div class="kpis" id="kpis"></div>
+
+<div id="vFleet">
+<div class="bar">
+<input type="search" id="q" placeholder="Search ID / plate / name"><select id="srt"><option value="order">Sort: Fleet Order No.</option><option value="odo">Sort: Odometer (high to low)</option><option value="maint">Sort: Longest since maintenance</option><option value="pend">Sort: Most pending works</option></select>
+<select id="fs"><option value="">All status</option><option value="online">Online</option><option value="offline">Offline</option></select>
+<select id="fp"><option value="">All parts</option><option value="none">No parts pending</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option></select>
+</div>
+<div class="wrap"><table class="cards"><thead><tr><th>Truck</th><th>Status</th><th>Odometer</th><th>Last maintenance</th><th>Spare parts</th><th>Pending work</th></tr></thead><tbody id="tb"></tbody></table><div class="empty" id="empty" hidden></div></div>
+</div>
+
+<div id="vParts" hidden>
+<div class="bar"><select id="pf"><option value="open">Open requests</option><option value="">All parts</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option><option value="installed">Installed</option><option value="cancelled">Cancelled</option></select></div>
+<div class="wrap"><table class="cards"><thead><tr><th>Truck</th><th>Part</th><th>Qty</th><th>Status</th><th>Requested</th><th>Last update</th></tr></thead><tbody id="pt"></tbody></table><div class="empty" id="pempty" hidden>No parts to show.</div></div>
+</div>
+<div id="vReports" hidden><div class="sec"><h3>Activity report (all trucks)</h3>
+<p class="mu" style="margin:0 0 12px">Lists every maintenance record, battery or tire replacement, spare part change and pending work logged in the chosen period.</p>
+<div class="row"><button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button></div>
+<div class="row"><span class="mu">Custom period:</span><input type="date" id="arf" style="flex:0 1 160px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 160px"><button class="p" id="arc">Create report</button></div></div></div>
+</main>
+
+<dialog id="dlg"><div class="dh"><b id="dt"></b><span><button id="rb" class="p">Truck report</button> <button id="dx">Close</button></span></div><div class="db" id="dbody"></div></dialog>
+<dialog id="rdlg"><div class="dh noprint"><b>Truck report</b><span><button id="rp" class="p">Print / PDF</button> <button id="rd">Download</button> <button id="rx">Close</button></span></div><div class="db" id="rbody"></div></dialog>
+<dialog id="actdlg"><div class="dh noprint"><b>Activity report</b><span><button id="actp" class="p">Print / PDF</button> <button id="actd">Download</button> <button id="actx">Close</button></span></div><div class="db" id="actbody"></div></dialog>
+<dialog id="ldlg" style="width:min(900px,96vw)"><div class="dh"><b>Photo</b><span><button id="ldel" hidden style="color:#d5001c;border-color:#d5001c">Delete photo</button> <button id="lx">Close</button></span></div><div class="db" style="text-align:center"><img id="limg" alt="" style="max-width:100%;max-height:75vh"></div></dialog>
+<dialog id="adlg"><div class="dh"><b>Add trucks</b><button id="ax">Close</button></div><div class="db"><div class="sec"><h3>Add one truck</h3><div id="addFields"></div><div class="row"><button class="p" id="addOne">Add truck</button></div></div><div class="sec"><h3>Bulk add (basic)</h3>
+<p class="mu" style="margin-top:0">One truck per line: <code>Fleet No, Plate, Name/Type</code> (plate and type optional).</p>
+<textarea id="bulk" rows="8" style="width:100%" placeholder="P1, 1234 ABC, Panther 6x6&#10;P2, 5678 DEF, Panther 8x8"></textarea>
+<div class="row"><button class="p" id="bulkGo">Add</button></div></div></div></dialog>
+
+<script>
+const ST={needed:["Needed","pw"],ordered:["Ordered","pw"],transit:["In transit","pb"],arrived:["Arrived","on"],installed:["Installed","pn"],cancelled:["Cancelled","pn"]};
+const OPEN=["needed","ordered","transit","arrived"];
+const $=id=>document.getElementById(id);
+function applyTheme(t){document.documentElement.dataset.theme=t;$("thm").textContent=t==="dark"?"☀ Light":"☾ Dark"}
+let theme="light";try{theme=localStorage.getItem("theme")||"light"}catch(e){}
+applyTheme(theme);
+$("thm").onclick=()=>{theme=theme==="dark"?"light":"dark";applyTheme(theme);try{localStorage.setItem("theme",theme)}catch(e){}};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KSA=3*3600e3;
+const today=()=>new Date(Date.now()+KSA).toISOString().slice(0,10);
+const now=()=>new Date(Date.now()+KSA).toISOString().slice(0,19).replace("T"," ");
+const kat=a=>{if(!a)return "";if(a.length>16)return a.slice(0,16);const d=Date.parse(a.replace(" ","T")+":00Z");return isNaN(d)?a:new Date(d+KSA).toISOString().slice(0,16).replace("T"," ")};
+let trucks=[],canWrite=false,col=null,me="",openId=null,view="fleet",editInfo=false;
+
+const plist=t=>t.partsList||[];
+const lastMaint=t=>{const h=t.history||[];return h.length?h.map(x=>x.date).sort().pop():"—"};
+const badge=s=>`<span class="b ${ST[s][1]}">${ST[s][0]}</span>`;
+const last=p=>{const l=(p.log||[]).slice(-1)[0];return l||{}};
+
+function partsCell(t){
+ const act=plist(t).filter(p=>OPEN.includes(p.status));
+ if(!act.length)return '<span class="b pn">No parts pending</span>';
+ return OPEN.map(s=>{const n=act.filter(p=>p.status===s).length;return n?`<span class="b ${ST[s][1]}">${n} ${ST[s][0]}</span>`:""}).join("");
+}
+function render(){
+ const q=$("q").value.toLowerCase(),fs=$("fs").value,fp=$("fp").value;
+ const allParts=trucks.flatMap(t=>plist(t).map(p=>({...p,t})));
+ const c=s=>allParts.filter(p=>p.status===s).length;
+ $("kpis").innerHTML=[["Trucks",trucks.length,""],["Online",trucks.filter(t=>t.status==="online").length,""],["Offline",trucks.filter(t=>t.status==="offline").length,"r"],["Parts needed",c("needed"),"r"],["Ordered / in transit",c("ordered")+c("transit"),""],["Arrived – to fit",c("arrived"),""],["Open pending works",trucks.reduce((n,t)=>n+pwOpen(t).length,0),"r"]].map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><small>${k[0]}</small></div>`).join("");
+ const rows=sorted(trucks).filter(t=>(!fs||t.status===fs)&&(!q||[t.fleetNo,t.plate,t.name].join(" ").toLowerCase().includes(q))&&(!fp||(fp==="none"?!plist(t).some(p=>OPEN.includes(p.status)):plist(t).some(p=>p.status===fp))));
+ $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${[t.year,t.name].filter(Boolean).map(esc).join(" · ")}</span></td><td data-l="Status"><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td data-l="Odometer">${Number(t.odo||0).toLocaleString()} km</td><td data-l="Last maintenance">${esc(lastMaint(t))}</td><td data-l="Spare parts">${partsCell(t)}</td><td data-l="Pending work">${pendingCell(t)}</td></tr>`).join("");
+ $("empty").hidden=rows.length>0;
+ $("empty").textContent=trucks.length?"No trucks match the filters.":(canWrite?"No trucks yet — tap “Add trucks”.":"No trucks yet.");
+ const pf=$("pf").value;
+ const pr=allParts.filter(p=>pf==="open"?OPEN.includes(p.status):(!pf||p.status===pf)).sort((a,b)=>(OPEN.includes(b.status)-OPEN.includes(a.status))||kat(last(b).at).localeCompare(kat(last(a).at)));
+ $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td data-l="Part">${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td data-l="Qty">${esc(p.qty)}</td><td data-l="Status">${badge(p.status)}</td><td data-l="Requested">${esc(f.by||"")}<br><span class="mu">${esc(kat(f.at).slice(0,10))}</span></td><td data-l="Last update">${esc(l.by||"")}<br><span class="mu">${esc(kat(l.at))}</span></td></tr>`}).join("");
+ $("pempty").hidden=pr.length>0;
+ if(openId&&$("dlg").open&&!editInfo){const y=$("dlg").scrollTop;detail(openId);$("dlg").scrollTop=y}
+}
+function save(t,patch){const {id,...rest}=t;return col.doc(id).set({...rest,...patch}).catch(e=>alert("Save failed: "+(e.message||e.code)))}
+
+function partCard(p,w){
+ const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(kat(l.at))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}${delBtnId("partsList",p.id)}</div>
+ ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
+ <div class="trail">${trail}</div></div>`;
+}
+const F=[["fleetNo","Fleet No. *"],["order","List position (1 = first)","number"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
+function infoForm(px,t){return `<div class="fg">${F.map(([k,l,ty])=>`<label>${l}<input id="${px}${k}" type="${ty||"text"}" value="${esc(t[k])}"></label>`).join("")}<label>Tire axles<select id="${px}axles">${[2,3,4].map(n=>`<option${n==(t.axles||4)?" selected":""}>${n}</option>`).join("")}</select></label></div>`}
+function readInfo(px){const v={};F.forEach(([k])=>v[k]=$(px+k).value.trim());v.axles=+$(px+"axles").value;return v}
+function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Type",t.name],["Make",t.make],["Model",t.model],["Year",t.year],["VIN / Chassis",t.vin],["Engine No.",t.engine],["In service since",t.commissioned],["Tire axles",t.axles||4],["Notes",t.notes]];return `<div class="ig">${R.map(([l,v])=>`<div><small>${l}</small><b>${esc(v)||"—"}</b></div>`).join("")}</div>`}
+function infoSec(t,w){
+ if(editInfo&&isAdmin())return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
+ return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${isAdmin()?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
+function odoPatch(t,o,src){if(!o||o===(t.odo||0))return {};return {odo:Math.max(o,t.odo||0),odoLog:[...(t.odoLog||[]),{date:today(),odo:o,src,by:me}]}}
+const axl=t=>t.axles||4;
+const desc=(a,b)=>b.date.localeCompare(a.date);
+const km=n=>Number(n).toLocaleString()+" km";
+const scopeTxt=e=>e.scope==="set"?"Whole set":"Axle "+(e.axles||[]).join(", ");
+function axleLast(t,n){return [...(t.tireLog||[])].filter(e=>e.scope==="set"||(e.axles||[]).includes(n)).sort(desc)[0]}
+const daysSince=d=>Math.round((new Date(today()+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5);
+const dTxt=n=>n<=0?"Today":n===1?"1 day":n+" days";
+function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${dTxt(daysSince(e.date))}</b><span>since ${esc(e.date)}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
+function tireHist(t){const L=(t.tireLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div>${delBtn("tire",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("tireLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
+function tireSec(t,w){return `<div class="sec"><h3>Tires</h3>${tireTiles(t)}
+ ${w?`<div class="row"><input type="date" id="td" value="${today()}"><select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
+ <div class="row" id="tax" hidden>${Array.from({length:axl(t)},(_,i)=>`<label><input type="checkbox" id="ta${i+1}"> Axle ${i+1}</label>`).join(" ")}</div>
+ <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button class="p" data-act="tire">Log tire replacement</button></div>`:""}
+ <details style="margin-top:8px"><summary>Replacement history</summary>${tireHist(t)}</details></div>`}
+function battHist(t){const L=(t.batteryLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div>${delBtn("battery",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("batteryLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
+function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);if(!l)return '<span class="mu">No record</span>';return `<span style="font-size:22px;font-weight:700">${dTxt(daysSince(l.date))}</span> <span class="mu">since last replacement · ${esc(l.date)}${l.note?" — "+esc(l.note):""}</span>`}
+function batterySec(t,w){return `<div class="sec"><h3>Battery</h3>${battLine(t)}
+ ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input id="bn" placeholder="Notes (brand, qty…)"><button class="p" data-act="bat">Log battery replacement</button></div>`:""}
+ <details style="margin-top:8px"><summary>Replacement history</summary>${battHist(t)}</details></div>`}
+function reportHTML(t){
+ const odl=[...(t.odoLog||[])].sort((a,b)=>b.date.localeCompare(a.date)||b.odo-a.odo),hist=[...(t.history||[])].sort(desc),parts=plist(t);
+ const tb=(h,rows)=>rows.length?`<table class="rt"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`:'<div class="mu">None recorded.</div>';
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Vehicle Report — ${esc(t.fleetNo)}</h2><small class="mu">Generated ${kat(now())}${me?" by "+esc(me):""}</small></div></div>
+ <h4>Vehicle information</h4>${infoGrid(t)}
+ <h4>Operational summary</h4><div class="ig"><div><small>Status</small><b>${t.status==="online"?"Online":"Offline"}</b></div><div><small>Current odometer</small><b>${km(t.odo||0)}</b></div><div><small>Last maintenance</small><b>${esc(lastMaint(t))}</b></div><div><small>Open part requests</small><b>${parts.filter(p=>OPEN.includes(p.status)).length}</b></div></div>
+ <h4>Status history</h4>${statusHTML(t,false)}
+ <h4>Odometer readings</h4>${tb(["Date","Reading","Source","By"],odl.map(o=>`<tr><td>${esc(o.date)}</td><td>${km(o.odo)}</td><td>${esc(o.src)}</td><td>${esc(o.by)}</td></tr>`))}
+ <h4>Tires</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
+ <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
+ <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(kat(l.at))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(kat(l.at))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
+const PW_ST=["Open","In progress","Waiting for parts","Done","Cancelled"],PW_PR=["Low","Normal","High","Urgent"];
+const pwl=t=>t.pendingWorks||[];
+const pwOpen=t=>pwl(t).filter(x=>x.status!=="Done"&&x.status!=="Cancelled");
+const pwCls=x=>x.priority==="Urgent"?"off":x.priority==="High"?"pw":"pb";
+function pendingCell(t){const o=pwOpen(t);if(!o.length)return '<span class="b pn">None</span>';const u=o.filter(x=>x.priority==="Urgent").length;return `<span class="b ${u?"off":"pw"}">${o.length} open</span>${u?`<span class="b off">${u} urgent</span>`:""}`}
+function pwCard(x,wr){
+ const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(kat(l.at))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ return `<div class="part"><div class="hd"><b>${esc(x.title)}</b><span><span class="b ${pwCls(x)}">${esc(x.priority)}</span><span class="b pn">${esc(x.status)}</span>${delBtnId("pendingWorks",x.id)}</span></div>
+ ${x.desc?`<div class="mu">${esc(x.desc)}</div>`:""}
+ ${wr?`<div class="row"><select data-ws="${esc(x.id)}">${PW_ST.map(v=>`<option${v===x.status?" selected":""}>${v}</option>`).join("")}</select><input data-wn="${esc(x.id)}" placeholder="Note / progress"><button data-act="wupd" data-wid="${esc(x.id)}">Update</button></div>`:""}
+ <div class="trail">${trail}</div></div>`}
+function pendingSec(t,w){const op=pwOpen(t),cl=pwl(t).filter(x=>!op.includes(x));
+ return `<div class="sec"><h3>Pending works${op.length?` (${op.length} open)`:""}</h3>${op.map(x=>pwCard(x,w)).join("")||'<div class="mu">No pending works.</div>'}
+ ${cl.length?`<details><summary>Closed (${cl.length}) – done / cancelled</summary>${cl.map(x=>pwCard(x,w)).join("")}</details>`:""}
+ ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="wt" placeholder="Pending work (e.g. replace hydraulic hose)" style="flex:2"><select id="wp">${PW_PR.map(p=>`<option${p==="Normal"?" selected":""}>${p}</option>`).join("")}</select><input id="wd" placeholder="Details (optional)" style="flex:2"><button class="p" data-act="wadd">Add pending work</button></div>`:""}</div>`}
+const nfx=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
+function orderedList(){return [...trucks].sort((x,y)=>((+x.order||1e9)-(+y.order||1e9))||nfx(x.fleetNo,y.fleetNo))}
+function applyOrder(list){list.forEach((z,i)=>{if(+z.order!==i+1)save(z,{order:i+1})})}
+function moveTruck(id,d){const l=orderedList(),i=l.findIndex(z=>z.id===id),j=i+d;if(i<0||j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];applyOrder(l)}
+function mvBtns(t){return $("srt").value==="order"?`<span class="b pn">#${t.order||"–"}</span> `:""}
+function sorted(a){const m=$("srt").value,nf=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
+ const l=t=>{const v=lastMaint(t);return v==="—"?"":v};
+ const by={fleet:(x,y)=>nf(x.fleetNo,y.fleetNo),order:(x,y)=>((+x.order||1e9)-(+y.order||1e9))||nf(x.fleetNo,y.fleetNo),odo:(x,y)=>(y.odo||0)-(x.odo||0),maint:(x,y)=>l(x).localeCompare(l(y))||nf(x.fleetNo,y.fleetNo),pend:(x,y)=>pwOpen(y).length-pwOpen(x).length||nf(x.fleetNo,y.fleetNo)};
+ return [...a].sort(by[m]||by.order)}
+const PHB="photos",urlCache=new Map();let lbPath=null;
+const DST='padding:2px 8px;font-size:12px;color:#d5001c;border-color:#d5001c;margin-top:4px';
+const delBtn=(k,i)=>isAdmin()?`<div><button class="dbtn" data-act="dellog" data-k="${k}" data-i="${i}" style="${DST}">Delete</button></div>`:"";
+const delBtnId=(k,id)=>isAdmin()?`<button class="dbtn" data-act="dellog" data-k="${k}" data-id="${esc(id)}" style="${DST};margin-top:0">Delete</button>`:"";
+async function shrink(file,max=1280){
+ const img=await new Promise((res,rej)=>{const i=new Image(),u=URL.createObjectURL(file);i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(new Error("Cannot read image "+file.name));i.src=u});
+ const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+ c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+ let b=await new Promise(r=>c.toBlob(r,"image/jpeg",0.7));
+ if(b&&b.size>450000)b=await new Promise(r=>c.toBlob(r,"image/jpeg",0.5));
+ return b}
+async function uploadPhotos(truckId,files){const out=[];let n=0;for(const f of files){const b=await shrink(f);if(!b)throw new Error("Could not process "+f.name);const p=`${truckId}/${Date.now()}-${n++}.jpg`;const {error}=await sb.storage.from(PHB).upload(p,b,{contentType:"image/jpeg"});if(error)throw error;out.push(p)}return out}
+async function loadPhotos(root){const imgs=[...root.querySelectorAll("img[data-ph]")];if(!imgs.length)return;
+ const need=[...new Set(imgs.map(i=>i.dataset.ph))].filter(p=>!(urlCache.get(p)&&urlCache.get(p).exp>Date.now()));
+ if(need.length){const {data,error}=await sb.storage.from(PHB).createSignedUrls(need,3600);if(!error&&data)data.forEach(d=>{if(d.signedUrl)urlCache.set(d.path,{url:d.signedUrl,exp:Date.now()+3300000})})}
+ imgs.forEach(i=>{const c=urlCache.get(i.dataset.ph);if(c)i.src=c.url})}
+const phHTML=(h,big)=>(h.photos&&h.photos.length)?`<div class="th">${h.photos.map(p=>`<img data-ph="${esc(p)}" alt="photo"${big?' style="width:130px;height:130px"':""}>`).join("")}</div>`:"";
+function collectActivity(from,to){
+ const A=[],inr=d=>d&&d>=from&&d<=to,od=()=>"";
+ trucks.forEach(t=>{
+  (t.history||[]).forEach(h=>{if(inr(h.date))A.push({d:h.date,tm:"",t:t.fleetNo,c:"Maintenance",a:h.type,x:(h.note||"")+od(h)+(h.photos&&h.photos.length?" · "+h.photos.length+" photo(s)":""),by:h.by})});
+  (t.batteryLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Battery",a:"Battery replaced",x:(e.note||"")+od(e),by:e.by})});
+  (t.tireLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Tires",a:"Tires replaced – "+scopeTxt(e),x:(e.note||"")+od(e),by:e.by})});
+  plist(t).forEach(p=>(p.log||[]).forEach((l,i)=>{const d=kat(l.at).slice(0,10);if(inr(d))A.push({d,tm:kat(l.at).slice(11),t:t.fleetNo,c:"Spare part",a:(i===0?"Part requested":"Part status: "+ST[l.s][0])+" – "+p.name+" × "+p.qty,x:[l.note,i>0&&p.ref?"Ref: "+p.ref:""].filter(Boolean).join(" · "),by:l.by})}));
+  pwl(t).forEach(w=>(w.log||[]).forEach((l,i)=>{const d=kat(l.at).slice(0,10);if(inr(d))A.push({d,tm:kat(l.at).slice(11),t:t.fleetNo,c:"Pending work",a:(i===0?"Pending work added ("+w.priority+")":"Pending work status: "+l.s)+" – "+w.title,x:l.note||(i===0?w.desc||"":""),by:l.by})}));
+ });
+ return A.sort((a,b)=>b.d.localeCompare(a.d)||String(b.tm).localeCompare(String(a.tm))||nfx(a.t,b.t))}
+function actHTML(from,to,A){
+ const fd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+ const C={Maintenance:"pb",Battery:"on",Tires:"pn","Spare part":"pw","Pending work":"off"};
+ const cnt=c=>A.filter(x=>x.c===c).length;let rows="",last="";
+ A.forEach(x=>{if(x.d!==last){last=x.d;rows+=`<tr class="dg"><td colspan="5">${fd(x.d)}</td></tr>`}
+  rows+=`<tr><td><b>${esc(x.t)}</b></td><td><span class="b ${C[x.c]}">${x.c}</span></td><td>${esc(x.a)}</td><td>${esc(x.x)}</td><td>${esc(x.by)}${x.tm?`<br><span class="mu">${esc(x.tm)}</span>`:""}</td></tr>`});
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Activity Report</h2><small class="mu">${fd(from)} – ${fd(to)} · Generated ${kat(now())}${me?" by "+esc(me):""}</small></div></div>
+ <h4>Summary</h4><div class="ig"><div><small>Total activities</small><b>${A.length}</b></div><div><small>Trucks involved</small><b>${new Set(A.map(x=>x.t)).size}</b></div>${Object.keys(C).map(c=>`<div><small>${c}</small><b>${cnt(c)}</b></div>`).join("")}</div>
+ <h4>Activities (newest first)</h4>${A.length?`<table class="rt"><thead><tr><th>Truck</th><th>Type</th><th>Activity</th><th>Details</th><th>Logged by</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="mu">No activity was logged in this period.</div>'}</div>`}
+function showActivity(from,to){$("actbody").innerHTML=actHTML(from,to,collectActivity(from,to));$("actdlg").showModal()}
+const fmtDur=ms=>{const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d?d+" d "+h+" h":h?h+" h "+m+" min":m+" min"};
+function statusHTML(t,adm){
+ const L=(t.statusLog||[]).map((e,i)=>({...e,_i:i})).sort((a,b)=>kat(a.at).localeCompare(kat(b.at)));
+ const ms=a=>Date.parse(kat(a).replace(" ","T")+":00Z");
+ L.forEach((e,i)=>{const nx=L[i+1];e.ongoing=e.s==="offline"&&!nx;e.dur=e.s==="offline"?fmtDur(Math.max(0,(nx?ms(nx.at):Date.now()+KSA)-ms(e.at))):""});
+ return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(kat(e.at))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
+function statusSec(t){return `<div class="sec"><h3>Status history</h3>${statusHTML(t,true)}</div>`}
+function detail(id){
+ const t=trucks.find(x=>x.id===id);if(!t)return;openId=id;
+ $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
+ const w=canWrite;
+ const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
+ const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(c.date)+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
+ const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
+ $("dbody").innerHTML=`
+ ${infoSec(t,w)}<div class="sec"><h3>Status &amp; odometer</h3><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span> <b>${Number(t.odo||0).toLocaleString()} km</b>
+ ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button class="p" data-act="sto">Update</button></div>`:""}
+ <details style="margin-top:8px"><summary>Status history</summary>${statusHTML(t,true)}</details></div>
+ <div class="sec"><h3>Spare parts</h3>
+ ${op.map(p=>partCard(p,w)).join("")||'<div class="mu">No open part requests.</div>'}
+ ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
+ ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
+ ${pendingSec(t,w)}${batterySec(t,w)}${tireSec(t,w)}
+ ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row"><input type="date" id="hd" value="${today()}"><select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
+ <div class="sec"><h3>Maintenance history</h3>${hist}</div>
+ ${isAdmin()?`<div class="sec" style="border-color:#d5001c"><h3>Delete truck</h3><div class="mu">Permanently removes this truck and all its records.</div><div class="row"><button data-act="deltruck" style="color:#d5001c;border-color:#d5001c">Delete this truck</button></div></div>`:""}`;
+ if(w)$("st").value=t.status;loadPhotos($("dbody"));
+ if(!$("dlg").open)$("dlg").showModal();
+}
+$("dbody").addEventListener("click",e=>{
+ const a=e.target.dataset.act;if(!a||!canWrite)return;const t=trucks.find(x=>x.id===openId);if(!t)return;
+ if(a==="sto"){const o=$("od").value,ns=$("st").value;save(t,{status:ns,...(ns!==t.status?{statusLog:[...(t.statusLog||[]),{s:ns,by:me,at:now()}]}:{}),...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
+ else if(a==="bat"){save(t,{batteryLog:[...(t.batteryLog||[]),{date:$("bd").value,note:$("bn").value.trim(),by:me}]})}
+ else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");save(t,{tireLog:[...(t.tireLog||[]),{date:$("td").value,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
+ else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;detail(openId)}
+ else if(a==="cancelinfo"){editInfo=false;detail(openId)}
+ else if(a==="dellog"){if(!isAdmin())return;const k=e.target.dataset.k,i=e.target.dataset.i,id=e.target.dataset.id;
+  if(!confirm("Delete this entry permanently? This cannot be undone."))return;
+  if(k==="battery"||k==="tire"){save(t,{[k]:{}});return}
+  const arr=t[k]||[],del=id!==undefined?arr.find(x=>x.id===id):arr[+i];
+  if(k==="history"&&del&&del.photos&&del.photos.length)sb.storage.from(PHB).remove(del.photos);
+  save(t,{[k]:id!==undefined?arr.filter(x=>x.id!==id):arr.filter((_,j)=>j!==+i)})}
+ else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{const ps=(t.history||[]).flatMap(h=>h.photos||[]);if(ps.length)sb.storage.from(PHB).remove(ps);trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
+ else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
+ else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
+ else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;const pos=parseInt(v.order);
+  if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
+  else save(t,{...v,order:""})}
+ else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");const fl=[...$("hp").files];if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
+  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:$("hd").value,type:$("ht").value,note:n,by:me,photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
+ else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
+  const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
+  save(t,{partsList:[...plist(t),p]})}
+ else if(a==="pupd"){const id=e.target.dataset.pid,s=document.querySelector(`[data-ps="${id}"]`).value,ref=document.querySelector(`[data-pr="${id}"]`).value.trim(),note=document.querySelector(`[data-pn="${id}"]`).value.trim();
+  save(t,{partsList:plist(t).map(p=>p.id!==id?p:{...p,status:s,ref,log:(s!==p.status||note||ref!==(p.ref||""))?[...(p.log||[]),{s,by:me,at:now(),note:note||(ref!==(p.ref||"")?"Ref: "+ref:"")}]:p.log})})}
+});
+document.addEventListener("click",e=>{const m=e.target.closest("[data-mv]");if(m){moveTruck(m.dataset.mv,+m.dataset.d);return}const r=e.target.closest("tr.r");if(r)detail(r.dataset.id)});
+$("dx").onclick=()=>{$("dlg").close();openId=null;editInfo=false};
+$("dbody").addEventListener("change",e=>{if(e.target.id==="tsc")$("tax").hidden=e.target.value==="set"});
+$("rb").onclick=()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;$("rbody").innerHTML=reportHTML(t);$("rdlg").showModal();loadPhotos($("rbody"))};
+$("rx").onclick=()=>$("rdlg").close();
+document.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>{const n=+b.dataset.ar,to=today(),d=new Date(to+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-(n-1));showActivity(d.toISOString().slice(0,10),to)});
+$("arc").onclick=()=>{const f=$("arf").value,t=$("art").value;if(!f||!t)return alert("Choose both a start date and an end date.");if(f>t)return alert("The start date must be before the end date.");showActivity(f,t)};
+$("actx").onclick=()=>$("actdlg").close();
+$("actp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
+$("actd").onclick=async()=>{const d=await claude.use("downloads");if(!d)return alert("Download is not available — use Print.");
+ const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:5px 8px;text-align:left;font-size:13px;vertical-align:top}th{background:#f2f2f3}.dg td{background:#e8e8e8;font-weight:bold}.ig{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.mu{color:#777}.b{padding:1px 6px;font-weight:bold;font-size:12px}.pb{background:#e4eefb;color:#1d5fb8}.on{background:#e5f4ea;color:#1a7f37}.pw{background:#fff1d6;color:#9a5b00}.off{background:#fde8ea;color:#d5001c}.pn{background:#f2f2f3;color:#6b6f76}.rh{display:flex;justify-content:space-between;border-bottom:3px solid #d5001c;padding-bottom:8px}";
+ try{await d.save({filename:"Activity-report-"+today()+".html",data:`<!DOCTYPE html><meta charset="utf-8"><title>Activity report</title><style>${css}</style>${$("actbody").innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
+document.addEventListener("click",e=>{const im=e.target.closest("img[data-ph]");if(!im||!im.src)return;lbPath=im.dataset.ph;$("limg").src=im.src;$("ldel").hidden=!(isAdmin()&&openId&&$("dlg").open&&!$("rdlg").open);$("ldlg").showModal()});
+$("lx").onclick=()=>$("ldlg").close();
+$("ldel").onclick=async()=>{if(!isAdmin()||!lbPath||!confirm("Delete this photo permanently?"))return;const t=trucks.find(x=>x.id===openId);if(!t)return;
+ await save(t,{history:(t.history||[]).map(h=>h.photos&&h.photos.includes(lbPath)?{...h,photos:h.photos.filter(p=>p!==lbPath)}:h)});
+ await sb.storage.from(PHB).remove([lbPath]);urlCache.delete(lbPath);$("ldlg").close()};
+$("ax").onclick=()=>$("adlg").close();
+$("rp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
+$("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);const d=await claude.use("downloads");
+ const box=$("rbody").cloneNode(true);for(const im of box.querySelectorAll("img[data-ph]")){try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b)})}catch(e){}}if(!d)return alert("Download is not available — use Print.");
+ const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:130px;height:130px;object-fit:cover}.dbtn{display:none}";
+ try{await d.save({filename:`${t.fleetNo||"truck"}-report.html`,data:`<!DOCTYPE html><meta charset="utf-8"><title>Report ${esc(t.fleetNo)}</title><style>${css}</style>${box.innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("vFleet").hidden=view!=="fleet";$("vParts").hidden=view!=="parts";$("vReports").hidden=view!=="reports";$("kpis").style.display=view==="reports"?"none":""});
+try{let v=localStorage.getItem("srt");if(!v||v==="fleet")v="order";$("srt").value=v}catch(e){}
+$("srt").addEventListener("input",()=>{try{localStorage.setItem("srt",$("srt").value)}catch(e){}});
+["q","fs","fp","pf","srt"].forEach(i=>$(i).addEventListener("input",render));
+$("addBtn").onclick=()=>$("adlg").showModal();
+$("addFields").innerHTML=infoForm("a",{axles:4});
+$("addOne").onclick=async()=>{const v=readInfo("a");if(!v.fleetNo)return alert("Fleet number is required.");
+ await col.doc().set({...v,order:v.order||String(Math.max(0,...trucks.map(t=>+t.order||0))+1),status:"online",odo:0,partsList:[],batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code));
+ $("addFields").innerHTML=infoForm("a",{axles:4});$("adlg").close()};
+$("bulkGo").onclick=async()=>{
+ const lines=$("bulk").value.split("\n").map(l=>l.trim()).filter(Boolean);
+ for(const l of lines){const [f,p,n]=l.split(",").map(s=>s.trim());
+  await col.doc().set({fleetNo:f,plate:p||"",name:n||"",status:"online",odo:0,partsList:[],axles:4,batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code))}
+ $("bulk").value="";$("adlg").close();
+};
+const SUPABASE_URL="https://fsfciikyhrljgddffigt.supabase.co",SUPABASE_KEY="sb_publishable_GvekNjlp74vURcOtA2BLuA_E11NcZ8t";
+let sb=null,role=null,uname="";
+const isAdmin=()=>role==="admin";
+const claude={use:async n=>{
+ if(n==="db")return{collection:()=>({
+  onSnapshot(cb,err){const load=async()=>{const {data,error}=await sb.from("trucks").select("id,data");if(error){err&&err({code:error.message});return}cb({docs:data.map(r=>({id:r.id,data:()=>r.data}))})};load();sb.channel("trucks").on("postgres_changes",{event:"*",schema:"public",table:"trucks"},load).subscribe()},
+  doc(id){return{set:async d=>{const ts=new Date().toISOString();
+   if(id){const {data,error}=await sb.from("trucks").update({data:d,updated_at:ts}).eq("id",id).select("id");if(error)throw error;if(!data||!data.length)throw new Error("You do not have permission to change this record.")}
+   else{const {error}=await sb.from("trucks").insert({data:d,updated_at:ts});if(error)throw error}},delete:async()=>{const {error}=await sb.from("trucks").delete().eq("id",id);if(error)throw error}}}})};
+ if(n==="user")return{can:async()=>role==="technician"||role==="admin",me:async()=>({name:uname})};
+ if(n==="downloads")return{save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/html"}));a.download=filename;a.click()}};
+}};
+function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("login").style.display="flex"}
+async function boot(){
+ if(typeof supabase==="undefined"){loginMsg("Could not load the Supabase library. Check your internet or try another network.",false);return}
+ if(SUPABASE_KEY.startsWith("PASTE")){loginMsg("Not configured yet: paste your Supabase key in index.html.",false);return}
+ sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{lock:async(n,t,fn)=>await fn()}});
+ const sess=await Promise.race([sb.auth.getSession(),new Promise(r=>setTimeout(()=>r(null),8000))]);
+ if(sess===null){loginMsg("Connection is slow or blocked. Sign in again:",true);return}
+ const {data:{session}}=sess;
+ if(!session){loginMsg("Sign in with your company account.",true);return}
+ const {data:st,error:se}=await sb.from("staff").select("name,role").eq("email",session.user.email.toLowerCase()).maybeSingle();
+ if(se){loginMsg("Database error: "+se.message,false);$("so").hidden=false;return}
+ if(!st){loginMsg("Signed in as "+session.user.email+", but this account has not been approved. Ask the administrator to add your email.",false);$("lform").hidden=true;$("so").hidden=false;return}
+ role=st.role;uname=st.name||session.user.email;$("login").style.display="none";start().catch(e=>{$("role").textContent="Error: "+(e.message||e)});
+}
+$("lgo").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("le").value.trim(),password:$("lp").value});if(error)return alert(error.message);location.reload()};
+$("lp").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgo").click()});
+$("so").onclick=async()=>{if(sb)await sb.auth.signOut();location.reload()};
+async function start(){
+ const db=await claude.use("db"),user=await claude.use("user");
+ if(!db){$("role").textContent="Sign in required";$("empty").hidden=false;$("empty").textContent="Open this page while signed in to view fleet data.";return}
+ canWrite=user?(await user.can("data.write"))!==false:false;
+ try{me=user?((await user.me()).name||""):""}catch{}
+ {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
+ $("addBtn").hidden=!isAdmin();
+ col=db.collection("trucks");
+ col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
+}
+const CSS_TRUCK="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:5px 8px;text-align:left;font-size:13px;vertical-align:top}th{background:#f2f2f3}.dg td{background:#e8e8e8;font-weight:bold}.ig{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.mu{color:#777}.b{padding:1px 6px;font-weight:bold;font-size:12px}.pb{background:#e4eefb;color:#1d5fb8}.on{background:#e5f4ea;color:#1a7f37}.pw{background:#fff1d6;color:#9a5b00}.off{background:#fde8ea;color:#d5001c}.pn{background:#f2f2f3;color:#6b6f76}.rh{display:flex;justify-content:space-between;border-bottom:3px solid #d5001c;padding-bottom:8px}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:12mm}",CSS_ACT="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:130px;height:130px;object-fit:cover}.dbtn{display:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:12mm}";
+async function reportDoc(el,title,css){const box=el.cloneNode(true);
+ for(const im of box.querySelectorAll("img[data-ph]")){try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b)})}catch(e){}}
+ return `<!DOCTYPE html><meta charset="utf-8"><title>${title}</title><style>${css}</style>${box.innerHTML}`}
+function printDoc(html){const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
+ const w=f.contentWindow,d=w.document;d.open();d.write(html);d.close();
+ Promise.all([...d.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>setTimeout(()=>{w.focus();w.print();setTimeout(()=>f.remove(),120000)},300))}
+async function saveDoc(filename,html){const d=await claude.use("downloads");if(!d)return alert("Download is not available.");try{await d.save({filename,data:html})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}}
+$("rp").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;printDoc(await reportDoc($("rbody"),"Report "+esc(t.fleetNo),CSS_TRUCK))};
+$("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;saveDoc((t.fleetNo||"truck")+"-report.html",await reportDoc($("rbody"),"Report "+esc(t.fleetNo),CSS_TRUCK))};
+$("actp").onclick=async()=>printDoc(await reportDoc($("actbody"),"Activity report "+today(),CSS_ACT));
+$("actd").onclick=async()=>saveDoc("Activity-report-"+today()+".html",await reportDoc($("actbody"),"Activity report "+today(),CSS_ACT));
+boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
+</script></body></html>
