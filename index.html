@@ -118,7 +118,13 @@ details.fold[open]>summary .sum{display:none}
 <div id="vReports" hidden><div class="sec"><h3>Activity report (all trucks)</h3>
 <p class="mu" style="margin:0 0 12px">Lists every maintenance record, battery or tire replacement, spare part change and pending work logged in the chosen period.</p>
 <div class="row"><button data-ar="1">Today</button><button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button></div>
-<div class="row"><span class="mu">Custom period:</span><input type="date" id="arf" style="flex:0 1 160px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 160px"><button class="p" id="arc">Create report</button></div></div></div>
+<div class="row"><span class="mu">Custom period:</span><input type="date" id="arf" style="flex:0 1 160px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 160px"><button class="p" id="arc">Create report</button></div></div>
+<div class="sec" id="bkSec" hidden style="margin-top:14px"><h3>Backup and restore (admins only)</h3>
+<p class="mu" style="margin:0 0 12px">Export downloads every truck with its full history, plus all photos, in one zip file. Keep it on your PC and on a second place.</p>
+<div class="row"><button class="p" id="bkGo">Export backup</button></div><div class="mu" id="bkMsg" style="margin-top:6px"></div>
+<div style="border-top:1px solid var(--bd);margin-top:14px;padding-top:12px"><p class="mu" style="margin:0 0 8px">Restore adds trucks and photos from a backup zip. Trucks that already exist are never changed or overwritten.</p>
+<div class="row"><input type="file" id="rsFile" accept=".zip"><button id="rsGo">Restore from backup</button></div><div class="mu" id="rsMsg" style="margin-top:6px"></div></div></div>
+</div>
 </main>
 
 <dialog id="dlg"><div class="dh"><b id="dt"></b><span><button id="rb" class="p">Truck report</button> <button id="dx">Close</button></span></div><div class="db" id="dbody"></div></dialog>
@@ -405,7 +411,7 @@ const claude={use:async n=>{
    if(id){const {data,error}=await sb.from("trucks").update({data:d,updated_at:ts}).eq("id",id).select("id");if(error)throw error;if(!data||!data.length)throw new Error("You do not have permission to change this record.")}
    else{const {error}=await sb.from("trucks").insert({data:d,updated_at:ts});if(error)throw error}},delete:async()=>{const {error}=await sb.from("trucks").delete().eq("id",id);if(error)throw error}}}})};
  if(n==="user")return{can:async()=>role==="technician"||role==="admin",me:async()=>({name:uname})};
- if(n==="downloads")return{save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/html"}));a.download=filename;a.click()}};
+ if(n==="downloads")return{save:async({filename,data,type})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:type||"text/html"}));a.download=filename;a.click()}};
 }};
 function loginMsg(m,form){$("lmsg").textContent=m;$("lform").hidden=!form;$("login").style.display="flex"}
 async function boot(){
@@ -430,7 +436,7 @@ async function start(){
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
  {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
- $("addBtn").hidden=!isAdmin();
+ $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
 }
@@ -446,5 +452,60 @@ $("rp").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;pri
 $("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;saveDoc((t.fleetNo||"truck")+"-report.html",await reportDoc($("rbody"),"Report "+esc(t.fleetNo),CSS_TRUCK))};
 $("actp").onclick=async()=>printDoc(await reportDoc($("actbody"),"Activity report "+today(),CSS_ACT));
 $("actd").onclick=async()=>saveDoc("Activity-report-"+today()+".html",await reportDoc($("actbody"),"Activity report "+today(),CSS_ACT));
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0};
+function makeZip(files){
+ const enc=new TextEncoder(),parts=[],cd=[];let off=0;
+ const u16=n=>[n&255,(n>>>8)&255],u32=n=>[n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255];
+ for(const f of files){const nm=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+  const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+  parts.push(lh,nm,f.data);
+  cd.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+  off+=lh.length+nm.length+sz}
+ const cdSize=cd.reduce((a,b)=>a+b.length,0);
+ const end=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),0,0]);
+ return new Blob([...parts,...cd,end],{type:"application/zip"})}
+async function readZip(buf){
+ const v=new DataView(buf),u8=new Uint8Array(buf),dec=new TextDecoder();let e=-1;
+ for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65600);i--)if(v.getUint32(i,true)===0x06054b50){e=i;break}
+ if(e<0)throw new Error("This is not a valid zip file");
+ const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);const out=[];
+ for(let i=0;i<n;i++){if(v.getUint32(p,true)!==0x02014b50)throw new Error("The zip file is damaged");
+  const meth=v.getUint16(p+10,true),csz=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),lo=v.getUint32(p+42,true),name=dec.decode(u8.subarray(p+46,p+46+nl));
+  p+=46+nl+xl+cl;
+  const ds=lo+30+v.getUint16(lo+26,true)+v.getUint16(lo+28,true);let data=u8.subarray(ds,ds+csz);
+  if(meth===8){data=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())}
+  else if(meth!==0)throw new Error("Unsupported zip compression");
+  if(!name.endsWith("/"))out.push({name,data})}
+ return out}
+$("bkGo").onclick=async()=>{if(!isAdmin())return;const msg=$("bkMsg"),btn=$("bkGo");btn.disabled=true;
+ try{msg.textContent="Reading records...";
+  const {data:rows,error}=await sb.from("trucks").select("id,data,updated_at");if(error)throw error;
+  const paths=[...new Set(rows.flatMap(r=>(r.data.history||[]).flatMap(h=>h.photos||[])))];
+  const enc=new TextEncoder(),files=[{name:"trucks.json",data:enc.encode(JSON.stringify(rows,null,1))}];let ok=0;const miss=[];
+  for(let i=0;i<paths.length;i++){msg.textContent="Downloading photos "+(i+1)+" of "+paths.length+"...";
+   const {data,error:er}=await sb.storage.from(PHB).download(paths[i]);
+   if(er||!data){miss.push(paths[i]);continue}
+   files.push({name:"photos/"+paths[i],data:new Uint8Array(await data.arrayBuffer())});ok++}
+  files.push({name:"README.txt",data:enc.encode("Fleet dashboard backup\nCreated: "+kat(now())+" (KSA time) by "+me+"\nTrucks: "+rows.length+"\nPhotos: "+ok+(miss.length?"\nPhotos that could not be read ("+miss.length+"):\n"+miss.join("\n"):"")+"\n\nTo restore: Reports tab > Backup and restore > choose this zip > Restore from backup.\nKeep the folder and file names inside the photos folder unchanged.\n")});
+  const d=await claude.use("downloads");await d.save({filename:"Fleet-backup-"+now().slice(0,16).replace(/[: ]/g,"-")+".zip",data:makeZip(files),type:"application/zip"});
+  msg.textContent="Done: "+rows.length+" trucks, "+ok+" photos"+(miss.length?", "+miss.length+" photos could not be read":"")+". Keep the file safe.";
+ }catch(e){msg.textContent="Backup failed: "+(e.message||e)}finally{btn.disabled=false}};
+$("rsGo").onclick=async()=>{if(!isAdmin())return;const f=$("rsFile").files[0];if(!f)return alert("Choose a backup zip file first.");
+ if(!confirm("Restore from this backup?\\n\\nTrucks that already exist are NOT changed. Only missing trucks and missing photos are added."))return;
+ const msg=$("rsMsg"),btn=$("rsGo");btn.disabled=true;
+ try{msg.textContent="Reading the backup file...";
+  const files=await readZip(await f.arrayBuffer());const tj=files.find(x=>x.name==="trucks.json");if(!tj)throw new Error("trucks.json was not found in this zip");
+  const rows=JSON.parse(new TextDecoder().decode(tj.data));
+  const {data:ex,error}=await sb.from("trucks").select("id");if(error)throw error;const have=new Set(ex.map(x=>x.id));
+  let added=0,skipped=0;
+  for(const r of rows){if(have.has(r.id)){skipped++;continue}
+   const {error:e2}=await sb.from("trucks").insert({id:r.id,data:r.data,updated_at:r.updated_at});if(e2)throw e2;added++;msg.textContent="Restoring trucks... "+added}
+  const ph=files.filter(x=>x.name.startsWith("photos/"));let up=0,sk=0,fail=0;
+  for(let i=0;i<ph.length;i++){msg.textContent="Restoring photos "+(i+1)+" of "+ph.length+"...";
+   const {error:e3}=await sb.storage.from(PHB).upload(ph[i].name.slice(7),new Blob([ph[i].data],{type:"image/jpeg"}),{contentType:"image/jpeg",upsert:false});
+   if(!e3)up++;else if(/exist|duplicate/i.test(e3.message||""))sk++;else fail++}
+  msg.textContent="Done. Trucks added: "+added+" (already there: "+skipped+"). Photos added: "+up+" (already there: "+sk+")"+(fail?", failed: "+fail:"")+".";
+ }catch(e){msg.textContent="Restore failed: "+(e.message||e)}finally{btn.disabled=false}};
 boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
 </script></body></html>
