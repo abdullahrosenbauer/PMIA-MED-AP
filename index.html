@@ -79,6 +79,14 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
  .rep{overflow-x:auto}
  .ax{grid-template-columns:repeat(2,1fr)}
 }
+details.fold>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;user-select:none;-webkit-user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"\25B8";color:var(--pr);font-size:18px;line-height:1;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary h3{margin:0;flex:1}
+details.fold[open]>summary{margin-bottom:10px}
+details.fold>summary .sum{color:var(--mu);font-size:13px;text-align:right}
+details.fold[open]>summary .sum{display:none}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -136,6 +144,7 @@ const today=()=>new Date(Date.now()+KSA).toISOString().slice(0,10);
 const now=()=>new Date(Date.now()+KSA).toISOString().slice(0,19).replace("T"," ");
 const kat=a=>{if(!a)return "";if(a.length>16)return a.slice(0,16);const d=Date.parse(a.replace(" ","T")+":00Z");return isNaN(d)?a:new Date(d+KSA).toISOString().slice(0,16).replace("T"," ")};
 let trucks=[],canWrite=false,col=null,me="",openId=null,view="fleet",editInfo=false;
+const openSecs=new Set();
 
 const plist=t=>t.partsList||[];
 const lastMaint=t=>{const h=t.history||[];return h.length?h.map(x=>x.date).sort().pop():"—"};
@@ -278,8 +287,29 @@ function statusHTML(t,adm){
  L.forEach((e,i)=>{const nx=L[i+1];e.ongoing=e.s==="offline"&&!nx;e.dur=e.s==="offline"?fmtDur(Math.max(0,(nx?ms(nx.at):Date.now()+KSA)-ms(e.at))):""});
  return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(kat(e.at))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
 function statusSec(t){return `<div class="sec"><h3>Status history</h3>${statusHTML(t,true)}</div>`}
+function secSummary(k,t){
+ const act=plist(t).filter(p=>OPEN.includes(p.status)).length;
+ if(k==="Vehicle information")return [t.make,t.model,t.year].filter(Boolean).join(" · ");
+ if(k==="Status & odometer")return (t.status==="online"?"Online":"Offline")+" · "+km(t.odo||0);
+ if(k==="Spare parts")return act?act+" open":"None pending";
+ if(k==="Pending works")return pwOpen(t).length?"":"None";
+ if(k==="Battery"){const l=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);return l?dTxt(daysSince(l.date)):"No record"}
+ if(k==="Tires")return Array.from({length:axl(t)},(_,i)=>{const e=axleLast(t,i+1);return "A"+(i+1)+" "+(e?daysSince(e.date)+"d":"–")}).join(" · ");
+ if(k==="Maintenance history"){const n=(t.history||[]).length;return n?n+" record"+(n>1?"s":""):"None"}
+ return ""}
+function foldify(t){
+ [...$("dbody").children].filter(e=>e.classList.contains("sec")).forEach(sec=>{
+  const h=sec.querySelector(":scope>h3");if(!h)return;
+  const key=h.textContent.replace(/\s*\(.*\)\s*$/,"").trim();
+  const d=document.createElement("details");d.className="sec fold";d.dataset.k=key;d.style.cssText=sec.style.cssText;
+  if(openSecs.has(key))d.open=true;
+  const sm=document.createElement("summary");sm.appendChild(h);
+  const sum=document.createElement("span");sum.className="sum";sum.textContent=secSummary(key,t);sm.appendChild(sum);
+  d.appendChild(sm);while(sec.firstChild)d.appendChild(sec.firstChild);
+  d.addEventListener("toggle",()=>{d.open?openSecs.add(key):openSecs.delete(key)});
+  sec.replaceWith(d)})}
 function detail(id){
- const t=trucks.find(x=>x.id===id);if(!t)return;openId=id;
+ const t=trucks.find(x=>x.id===id);if(!t)return;if(openId!==id||!$("dlg").open)openSecs.clear();openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
  const w=canWrite;
  const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
@@ -297,7 +327,7 @@ function detail(id){
  ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row"><input type="date" id="hd" value="${today()}"><select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
  <div class="sec"><h3>Maintenance history</h3>${hist}</div>
  ${isAdmin()?`<div class="sec" style="border-color:#d5001c"><h3>Delete truck</h3><div class="mu">Permanently removes this truck and all its records.</div><div class="row"><button data-act="deltruck" style="color:#d5001c;border-color:#d5001c">Delete this truck</button></div></div>`:""}`;
- if(w)$("st").value=t.status;loadPhotos($("dbody"));
+ if(w)$("st").value=t.status;foldify(t);loadPhotos($("dbody"));
  if(!$("dlg").open)$("dlg").showModal();
 }
 $("dbody").addEventListener("click",e=>{
@@ -305,8 +335,8 @@ $("dbody").addEventListener("click",e=>{
  if(a==="sto"){const o=$("od").value,ns=$("st").value;save(t,{status:ns,...(ns!==t.status?{statusLog:[...(t.statusLog||[]),{s:ns,by:me,at:now()}]}:{}),...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
  else if(a==="bat"){save(t,{batteryLog:[...(t.batteryLog||[]),{date:$("bd").value,note:$("bn").value.trim(),by:me}]})}
  else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");save(t,{tireLog:[...(t.tireLog||[]),{date:$("td").value,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
- else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;detail(openId)}
- else if(a==="cancelinfo"){editInfo=false;detail(openId)}
+ else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;openSecs.add("Edit vehicle information");detail(openId)}
+ else if(a==="cancelinfo"){editInfo=false;openSecs.add("Vehicle information");detail(openId)}
  else if(a==="dellog"){if(!isAdmin())return;const k=e.target.dataset.k,i=e.target.dataset.i,id=e.target.dataset.id;
   if(!confirm("Delete this entry permanently? This cannot be undone."))return;
   if(k==="battery"||k==="tire"){save(t,{[k]:{}});return}
@@ -316,7 +346,7 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{const ps=(t.history||[]).flatMap(h=>h.photos||[]);if(ps.length)sb.storage.from(PHB).remove(ps);trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
  else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
- else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;const pos=parseInt(v.order);
+ else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
   if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
   else save(t,{...v,order:""})}
  else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");const fl=[...$("hp").files];if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
