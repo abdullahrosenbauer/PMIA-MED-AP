@@ -261,8 +261,9 @@ function detail(id){
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
  ${infoSec(t,w)}<div class="sec"><h3>Status &amp; odometer</h3><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span> <b>${Number(t.odo||0).toLocaleString()} km</b>
- ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button class="p" data-act="sto">Update</button></div>`:""}</div>
- ${statusSec(t)}<div class="sec"><h3>Spare parts</h3>
+ ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button class="p" data-act="sto">Update</button></div>`:""}
+ <details style="margin-top:8px"><summary>Status history</summary>${statusHTML(t,true)}</details></div>
+ <div class="sec"><h3>Spare parts</h3>
  ${op.map(p=>partCard(p,w)).join("")||'<div class="mu">No open part requests.</div>'}
  ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
