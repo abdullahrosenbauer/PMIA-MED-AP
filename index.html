@@ -53,6 +53,32 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 .rt{min-width:0;font-size:13px}.rt th{background:var(--gb);color:var(--tx)}.rt td,.rt th{padding:5px 8px}
 .rh{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:3px solid var(--pr);padding-bottom:8px}
 @media print{.top,main,#dlg,#adlg,.noprint{display:none!important}#rdlg,#actdlg{position:static;width:100%;max-height:none;box-shadow:none;border:0;overflow:visible}#rdlg .db,#actdlg .db{background:#fff}}
+
+@media (max-width:900px),(pointer:coarse) and (max-width:1100px){
+ header{padding:10px 12px;gap:8px}
+ .logo svg{height:22px}.logo .t{font-size:10px;padding-left:8px}.logo .t b{font-size:12px}
+ header>div:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%}
+ .role{flex:1 1 100%;font-size:13px}
+ main{padding:10px}
+ .tabs{overflow-x:auto}.tab{padding:9px 12px;font-size:12px;white-space:nowrap}
+ .kpis{grid-template-columns:repeat(2,1fr);gap:8px}.kpi b{font-size:22px}
+ .bar>*{flex:1 1 100%!important;min-width:0}
+ input,select,textarea{font-size:16px}button,input,select{min-height:44px}
+ .row{gap:8px}.row>input,.row>select,.row>button{flex:1 1 100%!important;min-width:0!important}
+ .wrap{border:0;overflow:visible}
+ table.cards{display:block;min-width:0}table.cards thead{display:none}table.cards tbody{display:block}
+ table.cards tr{display:block;border:1px solid var(--bd);border-top:3px solid var(--pr);background:var(--card);margin-bottom:10px;padding:2px 0 6px}
+ table.cards td{display:inline-block;width:50%;vertical-align:top;border:0;padding:6px 12px;white-space:normal}
+ table.cards td::before{content:attr(data-l);display:block;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+ table.cards td:first-child{display:block;width:100%;font-size:17px;border-bottom:1px solid var(--bd);margin-bottom:4px}
+ table.cards td:first-child::before{content:none}
+ table.cards td[data-l="Part"]{width:100%}
+ dialog{width:100vw!important;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-top-width:4px}
+ .dh{flex-wrap:wrap;gap:8px;padding:10px 12px}.dh b{font-size:16px}
+ .db{padding:10px}
+ .rep{overflow-x:auto}
+ .ax{grid-template-columns:repeat(2,1fr)}
+}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -74,16 +100,16 @@ details summary{cursor:pointer;font-size:12px;color:var(--mu)}
 <select id="fs"><option value="">All status</option><option value="online">Online</option><option value="offline">Offline</option></select>
 <select id="fp"><option value="">All parts</option><option value="none">No parts pending</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option></select>
 </div>
-<div class="wrap"><table><thead><tr><th>Truck</th><th>Status</th><th>Odometer</th><th>Last maintenance</th><th>Spare parts</th><th>Pending work</th></tr></thead><tbody id="tb"></tbody></table><div class="empty" id="empty" hidden></div></div>
+<div class="wrap"><table class="cards"><thead><tr><th>Truck</th><th>Status</th><th>Odometer</th><th>Last maintenance</th><th>Spare parts</th><th>Pending work</th></tr></thead><tbody id="tb"></tbody></table><div class="empty" id="empty" hidden></div></div>
 </div>
 
 <div id="vParts" hidden>
 <div class="bar"><select id="pf"><option value="open">Open requests</option><option value="">All parts</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option><option value="installed">Installed</option><option value="cancelled">Cancelled</option></select></div>
-<div class="wrap"><table><thead><tr><th>Truck</th><th>Part</th><th>Qty</th><th>Status</th><th>Requested</th><th>Last update</th></tr></thead><tbody id="pt"></tbody></table><div class="empty" id="pempty" hidden>No parts to show.</div></div>
+<div class="wrap"><table class="cards"><thead><tr><th>Truck</th><th>Part</th><th>Qty</th><th>Status</th><th>Requested</th><th>Last update</th></tr></thead><tbody id="pt"></tbody></table><div class="empty" id="pempty" hidden>No parts to show.</div></div>
 </div>
 <div id="vReports" hidden><div class="sec"><h3>Activity report (all trucks)</h3>
 <p class="mu" style="margin:0 0 12px">Lists every maintenance record, battery or tire replacement, spare part change and pending work logged in the chosen period.</p>
-<div class="row"><button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button></div>
+<div class="row"><button data-ar="1">Today</button><button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button></div>
 <div class="row"><span class="mu">Custom period:</span><input type="date" id="arf" style="flex:0 1 160px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 160px"><button class="p" id="arc">Create report</button></div></div></div>
 </main>
 
@@ -127,12 +153,12 @@ function render(){
  const c=s=>allParts.filter(p=>p.status===s).length;
  $("kpis").innerHTML=[["Trucks",trucks.length,""],["Online",trucks.filter(t=>t.status==="online").length,""],["Offline",trucks.filter(t=>t.status==="offline").length,"r"],["Parts needed",c("needed"),"r"],["Ordered / in transit",c("ordered")+c("transit"),""],["Arrived – to fit",c("arrived"),""],["Open pending works",trucks.reduce((n,t)=>n+pwOpen(t).length,0),"r"]].map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><small>${k[0]}</small></div>`).join("");
  const rows=sorted(trucks).filter(t=>(!fs||t.status===fs)&&(!q||[t.fleetNo,t.plate,t.name].join(" ").toLowerCase().includes(q))&&(!fp||(fp==="none"?!plist(t).some(p=>OPEN.includes(p.status)):plist(t).some(p=>p.status===fp))));
- $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${[t.year,t.name].filter(Boolean).map(esc).join(" · ")}</span></td><td><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td>${Number(t.odo||0).toLocaleString()} km</td><td>${esc(lastMaint(t))}</td><td>${partsCell(t)}</td><td>${pendingCell(t)}</td></tr>`).join("");
+ $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${[t.year,t.name].filter(Boolean).map(esc).join(" · ")}</span></td><td data-l="Status"><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td data-l="Odometer">${Number(t.odo||0).toLocaleString()} km</td><td data-l="Last maintenance">${esc(lastMaint(t))}</td><td data-l="Spare parts">${partsCell(t)}</td><td data-l="Pending work">${pendingCell(t)}</td></tr>`).join("");
  $("empty").hidden=rows.length>0;
  $("empty").textContent=trucks.length?"No trucks match the filters.":(canWrite?"No trucks yet — tap “Add trucks”.":"No trucks yet.");
  const pf=$("pf").value;
  const pr=allParts.filter(p=>pf==="open"?OPEN.includes(p.status):(!pf||p.status===pf)).sort((a,b)=>(OPEN.includes(b.status)-OPEN.includes(a.status))||kat(last(b).at).localeCompare(kat(last(a).at)));
- $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td>${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td>${esc(p.qty)}</td><td>${badge(p.status)}</td><td>${esc(f.by||"")}<br><span class="mu">${esc(kat(f.at).slice(0,10))}</span></td><td>${esc(l.by||"")}<br><span class="mu">${esc(kat(l.at))}</span></td></tr>`}).join("");
+ $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td data-l="Part">${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td data-l="Qty">${esc(p.qty)}</td><td data-l="Status">${badge(p.status)}</td><td data-l="Requested">${esc(f.by||"")}<br><span class="mu">${esc(kat(f.at).slice(0,10))}</span></td><td data-l="Last update">${esc(l.by||"")}<br><span class="mu">${esc(kat(l.at))}</span></td></tr>`}).join("");
  $("pempty").hidden=pr.length>0;
  if(openId&&$("dlg").open&&!editInfo){const y=$("dlg").scrollTop;detail(openId);$("dlg").scrollTop=y}
 }
