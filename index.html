@@ -97,6 +97,8 @@ details.fold[open]>summary .sum{display:none}
 .nt{border:1px solid var(--bd);border-left:4px solid var(--pr);background:var(--card);padding:10px 12px;margin-bottom:8px;cursor:pointer}
 .nt.warn{border-left-color:#e0a100}.nt b{display:block}.nt:hover{background:var(--hov)}
 @media (max-width:900px),(pointer:coarse) and (max-width:1100px){.row>.df{flex:1 1 100%}}
+.nt.hid{opacity:.7;border-left-color:var(--bd)}
+.ntc{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ntc select,.ntc button{padding:4px 8px;font-size:13px}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -309,28 +311,45 @@ function statusHTML(t,adm){
  return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(D(kat(e.at)))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
 function statusSec(t){return `<div class="sec"><h3>Status history</h3>${statusHTML(t,true)}</div>`}
 const AL={bat:330,pw:7,need:21,ord:45,off:7,bk:14};
-let lastBackup=null,metaLoaded=false;
+let lastBackup=null,metaLoaded=false,alertState={},showHid=false;
 const dAgo=a=>a?daysSince(kat(a).slice(0,10)):0;
-function computeAlerts(){const A=[];
- const add=(t,type,sec,txt,n,thr)=>A.push({id:t.id,t:t.fleetNo,type,sec,txt,days:n,sev:(n>=2*thr||(type==="Battery"&&n>=365))?"high":"warn"});
+const addDays=n=>{const d=new Date(today()+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+function alertHidden(a){const st=alertState[a.key];if(!st||st.sig!==a.sig)return false;return st.mode==="dismiss"||(st.mode==="snooze"&&today()<st.until)}
+function computeAll(){if(!metaLoaded)return [];const A=[];
+ const add=(t,type,sec,txt,n,thr,key,sig)=>A.push({id:t.id,t:t.fleetNo,type,sec,txt,days:n,key,sig:String(sig||""),sev:(n>=2*thr||(type==="Battery"&&n>=365))?"high":"warn"});
  trucks.forEach(t=>{
   const bl=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);
-  if(bl){const n=daysSince(bl.date);if(n>=AL.bat)add(t,"Battery","Battery",n+" days since the last battery replacement"+(n<365?" ("+(365-n)+" days left to one year)":" (over one year)"),n,AL.bat)}
-  pwOpen(t).forEach(w=>{const lg=(w.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);if(n>=AL.pw)add(t,"Pending work","Pending works","\""+w.title+"\" has had no update for "+n+" days",n,AL.pw)});
+  if(bl){const n=daysSince(bl.date);if(n>=AL.bat)add(t,"Battery","Battery",n+" days since the last battery replacement"+(n<365?" ("+(365-n)+" days left to one year)":" (over one year)"),n,AL.bat,"bat:"+t.id,bl.date)}
+  pwOpen(t).forEach(w=>{const lg=(w.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);if(n>=AL.pw)add(t,"Pending work","Pending works","\""+w.title+"\" has had no update for "+n+" days",n,AL.pw,"pw:"+t.id+":"+w.id,lg&&lg.at)});
   plist(t).forEach(p=>{const lg=(p.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);
-   if(p.status==="needed"&&n>=AL.need)add(t,"Spare part","Spare parts","\""+p.name+"\" has been needed for "+n+" days and is not ordered",n,AL.need);
-   if(p.status==="ordered"&&n>=AL.ord)add(t,"Spare part","Spare parts","\""+p.name+"\" was ordered "+n+" days ago with no update",n,AL.ord)});
-  if(t.status==="offline"){const sl=(t.statusLog||[]).filter(x=>x.s==="offline").slice(-1)[0];if(sl){const n=dAgo(sl.at);if(n>=AL.off)add(t,"Offline","Status & odometer","Offline for "+n+" days",n,AL.off)}}
+   if(p.status==="needed"&&n>=AL.need)add(t,"Spare part","Spare parts","\""+p.name+"\" has been needed for "+n+" days and is not ordered",n,AL.need,"need:"+t.id+":"+p.id,lg&&lg.at);
+   if(p.status==="ordered"&&n>=AL.ord)add(t,"Spare part","Spare parts","\""+p.name+"\" was ordered "+n+" days ago with no update",n,AL.ord,"ord:"+t.id+":"+p.id,lg&&lg.at)});
+  if(t.status==="offline"){const sl=(t.statusLog||[]).filter(x=>x.s==="offline").slice(-1)[0];if(sl){const n=dAgo(sl.at);if(n>=AL.off)add(t,"Offline","Status & odometer","Offline for "+n+" days",n,AL.off,"off:"+t.id,sl.at)}}
  });
- if(isAdmin()&&metaLoaded){
-  if(!lastBackup)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"No backup has been recorded yet. Export one from the Reports tab.",days:-1,sev:"warn"});
-  else{const n=dAgo(lastBackup);if(n>=AL.bk)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"The last backup was "+n+" days ago. Export a new one from the Reports tab.",days:n,sev:n>=2*AL.bk?"high":"warn"})}}
+ if(isAdmin()){
+  if(!lastBackup)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"No backup has been recorded yet. Export one from the Reports tab.",days:-1,key:"bk",sig:"none",sev:"warn"});
+  else{const n=dAgo(lastBackup);if(n>=AL.bk)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"The last backup was "+n+" days ago. Export a new one from the Reports tab.",days:n,key:"bk",sig:lastBackup,sev:n>=2*AL.bk?"high":"warn"})}}
+ A.forEach(a=>a.hid=alertHidden(a));
  return A.sort((a,b)=>(a.sev==="high"?0:1)-(b.sev==="high"?0:1)||b.days-a.days)}
-function updateBell(){const A=computeAlerts();$("bdg").textContent=A.length;$("bdg").hidden=!A.length}
-async function loadMeta(){try{const {data,error}=await sb.from("app_meta").select("v").eq("k","last_backup").maybeSingle();
-  if(error)throw error;lastBackup=data?data.v:null}catch(e){try{lastBackup=localStorage.getItem("lastBackup")}catch(x){}}
+const computeAlerts=()=>computeAll().filter(a=>!a.hid);
+function updateBell(){const n=computeAlerts().length;$("bdg").textContent=n;$("bdg").hidden=!n}
+async function loadMeta(){
+ try{const {data,error}=await sb.from("app_meta").select("k,v");if(error)throw error;lastBackup=null;alertState={};
+  (data||[]).forEach(r=>{if(r.k==="last_backup")lastBackup=r.v;else if(r.k.indexOf("alert:")===0){try{alertState[r.k.slice(6)]=JSON.parse(r.v)}catch(x){}}})}
+ catch(e){try{lastBackup=localStorage.getItem("lastBackup");alertState=JSON.parse(localStorage.getItem("alertState")||"{}")}catch(x){}}
  metaLoaded=true;updateBell()}
 async function saveBackupStamp(){const v=now();lastBackup=v;try{const {error}=await sb.from("app_meta").upsert({k:"last_backup",v});if(error)throw error}catch(e){try{localStorage.setItem("lastBackup",v)}catch(x){}}updateBell()}
+async function setAlertState(key,st){alertState[key]=st;
+ try{const {error}=await sb.from("app_meta").upsert({k:"alert:"+key,v:JSON.stringify(st)});if(error)throw error}
+ catch(e){try{localStorage.setItem("alertState",JSON.stringify(alertState))}catch(x){}}
+ updateBell();renderBell()}
+function renderBell(){const all=computeAll(),vis=all.filter(a=>!a.hid),hid=all.filter(a=>a.hid),adm=isAdmin();
+ const item=a=>{const st=alertState[a.key]||{};
+  const ctl=adm?(a.hid?`<div class="ntc"><span class="mu">${st.mode==="dismiss"?"Dismissed":"Snoozed until "+D(st.until)}</span><button data-nact="restore" data-key="${esc(a.key)}">Restore</button></div>`
+   :`<div class="ntc"><select data-snz="${esc(a.key)}"><option value="">Snooze...</option><option value="1">1 day</option><option value="3">3 days</option><option value="7">7 days</option><option value="14">14 days</option></select><button data-nact="dismiss" data-key="${esc(a.key)}">Dismiss</button></div>`):"";
+  return `<div class="nt ${a.hid?"hid":a.sev==="high"?"":"warn"}" data-tid="${esc(a.id)}" data-sec="${esc(a.sec)}"><b>${esc(a.t)} · ${esc(a.type)}</b><span>${esc(a.txt)}</span>${ctl}</div>`};
+ $("ntlist").innerHTML=(vis.length?vis.map(item).join(""):'<div class="sec mu">No alerts. Everything is on track.</div>')
+  +(adm&&hid.length?`<div style="margin:10px 0"><button data-nact="toggle">${showHid?"Hide":"Show"} snoozed / dismissed (${hid.length})</button></div>`+(showHid?hid.map(item).join(""):""):"")}
 function secSummary(k,t){
  const act=plist(t).filter(p=>OPEN.includes(p.status)).length;
  if(k==="Vehicle information")return [t.make,t.model,t.year].filter(Boolean).join(" · ");
@@ -474,7 +493,7 @@ async function start(){
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
  {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
- $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();if(isAdmin())loadMeta();
+ $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();loadMeta();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
 }
@@ -551,10 +570,21 @@ document.addEventListener("input",e=>{const el=e.target;if(!(el.matches&&el.matc
  const d=el.value.replace(/\D/g,"").slice(0,8);el.value=d.slice(0,4)+(d.length>4?"/"+d.slice(4,6):"")+(d.length>6?"/"+d.slice(6,8):"")});
 document.addEventListener("click",e=>{const b=e.target.closest(".dpk");if(!b)return;e.preventDefault();const n=b.parentNode.querySelector(".dnat");n.value=dv(b.dataset.dp)||today();try{n.showPicker()}catch(x){n.focus();n.click()}});
 document.addEventListener("change",e=>{const n=e.target;if(n.classList&&n.classList.contains("dnat"))n.parentNode.querySelector("input[type=text]").value=D(n.value)});
-$("bell").onclick=()=>{const A=computeAlerts();$("ntlist").innerHTML=A.length?A.map(a=>`<div class="nt ${a.sev==="high"?"":"warn"}" data-tid="${esc(a.id)}" data-sec="${esc(a.sec)}"><b>${esc(a.t)} · ${esc(a.type)}</b><span>${esc(a.txt)}</span></div>`).join(""):'<div class="sec mu">No alerts. Everything is on track.</div>';$("ntdlg").showModal()};
+$("bell").onclick=()=>{renderBell();$("ntdlg").showModal();loadMeta().then(renderBell)};
 $("ntx").onclick=()=>$("ntdlg").close();
-$("ntlist").addEventListener("click",e=>{const it=e.target.closest("[data-tid]");if(!it)return;$("ntdlg").close();
+$("ntlist").addEventListener("click",e=>{
+ const b=e.target.closest("[data-nact]");
+ if(b){if(!isAdmin())return;const a=b.dataset.nact,k=b.dataset.key;
+  if(a==="toggle"){showHid=!showHid;renderBell();return}
+  const al=computeAll().find(x=>x.key===k);
+  if(a==="dismiss"&&al)setAlertState(k,{sig:al.sig,mode:"dismiss"});
+  else if(a==="restore")setAlertState(k,{sig:"",mode:"off"});
+  return}
+ if(e.target.closest(".ntc"))return;
+ const it=e.target.closest("[data-tid]");if(!it)return;$("ntdlg").close();
  if(it.dataset.tid==="__backup"){document.querySelector('[data-v="reports"]').click();return}
  detail(it.dataset.tid);const d=document.querySelector('#dbody details.fold[data-k="'+it.dataset.sec+'"]');if(d)d.open=true});
+$("ntlist").addEventListener("change",e=>{const sel=e.target.closest("[data-snz]");if(!sel||!isAdmin()||!sel.value)return;
+ const al=computeAll().find(x=>x.key===sel.dataset.snz);if(al)setAlertState(al.key,{sig:al.sig,mode:"snooze",until:addDays(+sel.value)})});
 boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
 </script></body></html>
