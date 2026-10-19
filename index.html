@@ -87,6 +87,16 @@ details.fold>summary h3{margin:0;flex:1}
 details.fold[open]>summary{margin-bottom:10px}
 details.fold>summary .sum{color:var(--mu);font-size:13px;text-align:right}
 details.fold[open]>summary .sum{display:none}
+.df{position:relative;display:inline-flex;gap:4px;align-items:center;flex:1;min-width:150px}
+.df input[type=text]{flex:1;min-width:0}
+.df .dpk{padding:6px 9px;flex:none;line-height:1}
+.df .dnat{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;min-width:0!important;flex:none!important;padding:0;border:0}
+#bell{position:relative;padding:6px 10px;line-height:1;display:inline-flex;align-items:center}
+#bell svg{width:20px;height:20px}
+.bdg{position:absolute;top:-7px;right:-7px;background:var(--pr);color:#fff;border-radius:99px;font-size:11px;font-weight:700;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px}
+.nt{border:1px solid var(--bd);border-left:4px solid var(--pr);background:var(--card);padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.nt.warn{border-left-color:#e0a100}.nt b{display:block}.nt:hover{background:var(--hov)}
+@media (max-width:900px),(pointer:coarse) and (max-width:1100px){.row>.df{flex:1 1 100%}}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -96,7 +106,7 @@ details.fold[open]>summary .sum{display:none}
 <div class="logo">
 <svg viewBox="0 0 250 34" aria-label="Rosenbauer"><text x="0" y="27" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="31" fill="#d5001c" letter-spacing="1">ROSENBAUER</text></svg>
 <div class="t"><b>Fleet Maintenance Live Dashboard</b>Airport Service · Medina Airport · PMIA</div></div>
-<div><span class="role" id="role">Loading…</span> <button id="thm"></button> <button id="so">Sign out</button> <button id="addBtn" class="p" hidden>+ Add trucks</button></div>
+<div><span class="role" id="role">Loading…</span> <button id="bell" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bdg" id="bdg" hidden>0</span></button> <button id="thm"></button> <button id="so">Sign out</button> <button id="addBtn" class="p" hidden>+ Add trucks</button></div>
 </header></div>
 <main>
 <div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button><button class="tab" data-v="reports">Reports</button></div>
@@ -118,7 +128,7 @@ details.fold[open]>summary .sum{display:none}
 <div id="vReports" hidden><div class="sec"><h3>Activity report (all trucks)</h3>
 <p class="mu" style="margin:0 0 12px">Lists every maintenance record, battery or tire replacement, spare part change and pending work logged in the chosen period.</p>
 <div class="row"><button data-ar="1">Today</button><button data-ar="7">Last 7 days</button><button data-ar="14">Last 14 days</button><button data-ar="30">Last 30 days</button></div>
-<div class="row"><span class="mu">Custom period:</span><input type="date" id="arf" style="flex:0 1 160px"><span class="mu">to</span><input type="date" id="art" style="flex:0 1 160px"><button class="p" id="arc">Create report</button></div></div>
+<div class="row"><span class="mu">Custom period:</span><span id="arfW"></span><span class="mu">to</span><span id="artW"></span><button class="p" id="arc">Create report</button></div></div>
 <div class="sec" id="bkSec" hidden style="margin-top:14px"><h3>Backup and restore (admins only)</h3>
 <p class="mu" style="margin:0 0 12px">Export downloads every truck with its full history, plus all photos, in one zip file. Keep it on your PC and on a second place.</p>
 <div class="row"><button class="p" id="bkGo">Export backup</button></div><div class="mu" id="bkMsg" style="margin-top:6px"></div>
@@ -130,6 +140,7 @@ details.fold[open]>summary .sum{display:none}
 <dialog id="dlg"><div class="dh"><b id="dt"></b><span><button id="rb" class="p">Truck report</button> <button id="dx">Close</button></span></div><div class="db" id="dbody"></div></dialog>
 <dialog id="rdlg"><div class="dh noprint"><b>Truck report</b><span><button id="rp" class="p">Print / PDF</button> <button id="rd">Download</button> <button id="rx">Close</button></span></div><div class="db" id="rbody"></div></dialog>
 <dialog id="actdlg"><div class="dh noprint"><b>Activity report</b><span><button id="actp" class="p">Print / PDF</button> <button id="actd">Download</button> <button id="actx">Close</button></span></div><div class="db" id="actbody"></div></dialog>
+<dialog id="ntdlg"><div class="dh"><b>Notifications</b><button id="ntx">Close</button></div><div class="db" id="ntlist"></div></dialog>
 <dialog id="ldlg" style="width:min(900px,96vw)"><div class="dh"><b>Photo</b><span><button id="ldel" hidden style="color:#d5001c;border-color:#d5001c">Delete photo</button> <button id="lx">Close</button></span></div><div class="db" style="text-align:center"><img id="limg" alt="" style="max-width:100%;max-height:75vh"></div></dialog>
 <dialog id="adlg"><div class="dh"><b>Add trucks</b><button id="ax">Close</button></div><div class="db"><div class="sec"><h3>Add one truck</h3><div id="addFields"></div><div class="row"><button class="p" id="addOne">Add truck</button></div></div><div class="sec"><h3>Bulk add (basic)</h3>
 <p class="mu" style="margin-top:0">One truck per line: <code>Fleet No, Plate, Name/Type</code> (plate and type optional).</p>
@@ -149,6 +160,10 @@ const KSA=3*3600e3;
 const today=()=>new Date(Date.now()+KSA).toISOString().slice(0,10);
 const now=()=>new Date(Date.now()+KSA).toISOString().slice(0,19).replace("T"," ");
 const kat=a=>{if(!a)return "";if(a.length>16)return a.slice(0,16);const d=Date.parse(a.replace(" ","T")+":00Z");return isNaN(d)?a:new Date(d+KSA).toISOString().slice(0,16).replace("T"," ")};
+const D=s=>String(s??"").replace(/(\d{4})-(\d{2})-(\d{2})/g,"$1/$2/$3");
+const DATE_MSG="Enter the date as YYYY/MM/DD (for example 2026/10/18).";
+const dateField=(id,iso)=>`<span class="df"><input id="${id}" type="text" inputmode="numeric" maxlength="10" placeholder="YYYY/MM/DD" autocomplete="off" value="${esc(D(iso||""))}"><button type="button" class="dpk" data-dp="${id}" title="Pick a date">&#128197;</button><input type="date" class="dnat" tabindex="-1" aria-hidden="true"></span>`;
+const dv=id=>{const v=$(id).value.trim();if(!v)return "";const m=v.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);if(!m)return null;const iso=m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0"),t=new Date(iso+"T00:00:00Z");return(t.getUTCFullYear()==m[1]&&t.getUTCMonth()+1==+m[2]&&t.getUTCDate()==+m[3])?iso:null};
 let trucks=[],canWrite=false,col=null,me="",openId=null,view="fleet",editInfo=false;
 const openSecs=new Set();
 
@@ -168,27 +183,27 @@ function render(){
  const c=s=>allParts.filter(p=>p.status===s).length;
  $("kpis").innerHTML=[["Trucks",trucks.length,""],["Online",trucks.filter(t=>t.status==="online").length,""],["Offline",trucks.filter(t=>t.status==="offline").length,"r"],["Parts needed",c("needed"),"r"],["Ordered / in transit",c("ordered")+c("transit"),""],["Arrived – to fit",c("arrived"),""],["Open pending works",trucks.reduce((n,t)=>n+pwOpen(t).length,0),"r"]].map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><small>${k[0]}</small></div>`).join("");
  const rows=sorted(trucks).filter(t=>(!fs||t.status===fs)&&(!q||[t.fleetNo,t.plate,t.name].join(" ").toLowerCase().includes(q))&&(!fp||(fp==="none"?!plist(t).some(p=>OPEN.includes(p.status)):plist(t).some(p=>p.status===fp))));
- $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${[t.year,t.name].filter(Boolean).map(esc).join(" · ")}</span></td><td data-l="Status"><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td data-l="Odometer">${Number(t.odo||0).toLocaleString()} km</td><td data-l="Last maintenance">${esc(lastMaint(t))}</td><td data-l="Spare parts">${partsCell(t)}</td><td data-l="Pending work">${pendingCell(t)}</td></tr>`).join("");
+ $("tb").innerHTML=rows.map(t=>`<tr class="r" data-id="${esc(t.id)}"><td>${mvBtns(t)}<b>${esc(t.fleetNo)}</b><br><span class="mu">${[t.year,t.name].filter(Boolean).map(esc).join(" · ")}</span></td><td data-l="Status"><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span></td><td data-l="Odometer">${Number(t.odo||0).toLocaleString()} km</td><td data-l="Last maintenance">${esc(D(lastMaint(t)))}</td><td data-l="Spare parts">${partsCell(t)}</td><td data-l="Pending work">${pendingCell(t)}</td></tr>`).join("");
  $("empty").hidden=rows.length>0;
  $("empty").textContent=trucks.length?"No trucks match the filters.":(canWrite?"No trucks yet — tap “Add trucks”.":"No trucks yet.");
  const pf=$("pf").value;
  const pr=allParts.filter(p=>pf==="open"?OPEN.includes(p.status):(!pf||p.status===pf)).sort((a,b)=>(OPEN.includes(b.status)-OPEN.includes(a.status))||kat(last(b).at).localeCompare(kat(last(a).at)));
- $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td data-l="Part">${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td data-l="Qty">${esc(p.qty)}</td><td data-l="Status">${badge(p.status)}</td><td data-l="Requested">${esc(f.by||"")}<br><span class="mu">${esc(kat(f.at).slice(0,10))}</span></td><td data-l="Last update">${esc(l.by||"")}<br><span class="mu">${esc(kat(l.at))}</span></td></tr>`}).join("");
+ $("pt").innerHTML=pr.map(p=>{const f=(p.log||[])[0]||{},l=last(p);return `<tr class="r" data-id="${esc(p.t.id)}"><td><b>${esc(p.t.fleetNo)}</b></td><td data-l="Part">${esc(p.name)}${p.ref?`<br><span class="mu">Ref: ${esc(p.ref)}</span>`:""}</td><td data-l="Qty">${esc(p.qty)}</td><td data-l="Status">${badge(p.status)}</td><td data-l="Requested">${esc(f.by||"")}<br><span class="mu">${esc(D(kat(f.at).slice(0,10)))}</span></td><td data-l="Last update">${esc(l.by||"")}<br><span class="mu">${esc(D(kat(l.at)))}</span></td></tr>`}).join("");
  $("pempty").hidden=pr.length>0;
- if(openId&&$("dlg").open&&!editInfo){const y=$("dlg").scrollTop;detail(openId);$("dlg").scrollTop=y}
+ updateBell();if(openId&&$("dlg").open&&!editInfo){const y=$("dlg").scrollTop;detail(openId);$("dlg").scrollTop=y}
 }
 function save(t,patch){const {id,...rest}=t;return col.doc(id).set({...rest,...patch}).catch(e=>alert("Save failed: "+(e.message||e.code)))}
 
 function partCard(p,w){
- const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(kat(l.at))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(D(kat(l.at)))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
  return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}${delBtnId("partsList",p.id)}</div>
  ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
  <div class="trail">${trail}</div></div>`;
 }
 const F=[["fleetNo","Fleet No. *"],["order","List position (1 = first)","number"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
-function infoForm(px,t){return `<div class="fg">${F.map(([k,l,ty])=>`<label>${l}<input id="${px}${k}" type="${ty||"text"}" value="${esc(t[k])}"></label>`).join("")}<label>Tire axles<select id="${px}axles">${[2,3,4].map(n=>`<option${n==(t.axles||4)?" selected":""}>${n}</option>`).join("")}</select></label></div>`}
-function readInfo(px){const v={};F.forEach(([k])=>v[k]=$(px+k).value.trim());v.axles=+$(px+"axles").value;return v}
-function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Type",t.name],["Make",t.make],["Model",t.model],["Year",t.year],["VIN / Chassis",t.vin],["Engine No.",t.engine],["In service since",t.commissioned],["Tire axles",t.axles||4],["Notes",t.notes]];return `<div class="ig">${R.map(([l,v])=>`<div><small>${l}</small><b>${esc(v)||"—"}</b></div>`).join("")}</div>`}
+function infoForm(px,t){return `<div class="fg">${F.map(([k,l,ty])=>`<label>${l}${ty==="date"?dateField(px+k,t[k]):`<input id="${px}${k}" type="${ty||"text"}" value="${esc(t[k])}">`}</label>`).join("")}<label>Tire axles<select id="${px}axles">${[2,3,4].map(n=>`<option${n==(t.axles||4)?" selected":""}>${n}</option>`).join("")}</select></label></div>`}
+function readInfo(px){const v={};for(const [k,,ty] of F){if(ty==="date"){const x=dv(px+k);if(x===null){alert("In service since: "+DATE_MSG);return null}v[k]=x}else v[k]=$(px+k).value.trim()}v.axles=+$(px+"axles").value;return v}
+function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Type",t.name],["Make",t.make],["Model",t.model],["Year",t.year],["VIN / Chassis",t.vin],["Engine No.",t.engine],["In service since",D(t.commissioned)],["Tire axles",t.axles||4],["Notes",t.notes]];return `<div class="ig">${R.map(([l,v])=>`<div><small>${l}</small><b>${esc(v)||"—"}</b></div>`).join("")}</div>`}
 function infoSec(t,w){
  if(editInfo&&isAdmin())return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
  return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${isAdmin()?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
@@ -200,38 +215,38 @@ const scopeTxt=e=>e.scope==="set"?"Whole set":"Axle "+(e.axles||[]).join(", ");
 function axleLast(t,n){return [...(t.tireLog||[])].filter(e=>e.scope==="set"||(e.axles||[]).includes(n)).sort(desc)[0]}
 const daysSince=d=>Math.round((new Date(today()+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5);
 const dTxt=n=>n<=0?"Today":n===1?"1 day":n+" days";
-function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${dTxt(daysSince(e.date))}</b><span>since ${esc(e.date)}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
-function tireHist(t){const L=(t.tireLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(t.tire.date)}</small><div>${esc(t.tire.note)}</div>${delBtn("tire",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(e.date)} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("tireLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
+function tireTiles(t){return `<div class="ax">${Array.from({length:axl(t)},(_,i)=>i+1).map(n=>{const e=axleLast(t,n);return `<div><small>Axle ${n}</small>${e?`<b>${dTxt(daysSince(e.date))}</b><span>since ${esc(D(e.date))}${e.scope==="set"?" · whole set":""}</span>`:"<b>No record</b>"}</div>`}).join("")}</div>`}
+function tireHist(t){const L=(t.tireLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.tire&&t.tire.date&&!L.length?`<div class="h"><b>Earlier record</b> <small>${esc(D(t.tire.date))}</small><div>${esc(t.tire.note)}</div>${delBtn("tire",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${scopeTxt(e)}</b> <small>${esc(D(e.date))} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("tireLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">No tire replacements recorded.</div>'))}
 function tireSec(t,w){return `<div class="sec"><h3>Tires</h3>${tireTiles(t)}
- ${w?`<div class="row"><input type="date" id="td" value="${today()}"><select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
+ ${w?`<div class="row">${dateField("td",today())}<select id="tsc"><option value="set">Whole set replaced</option><option value="axles">Specific axle(s) only</option></select></div>
  <div class="row" id="tax" hidden>${Array.from({length:axl(t)},(_,i)=>`<label><input type="checkbox" id="ta${i+1}"> Axle ${i+1}</label>`).join(" ")}</div>
  <div class="row"><input id="tn" placeholder="Notes (wear, brand, size…)"><button class="p" data-act="tire">Log tire replacement</button></div>`:""}
  <details style="margin-top:8px"><summary>Replacement history</summary>${tireHist(t)}</details></div>`}
-function battHist(t){const L=(t.batteryLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>${esc(t.battery.date)}</b> <small>earlier record</small><div>${esc(t.battery.note)}</div>${delBtn("battery",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>${esc(e.date)}</b> <small>${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("batteryLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
-function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);if(!l)return '<span class="mu">No record</span>';return `<span style="font-size:22px;font-weight:700">${dTxt(daysSince(l.date))}</span> <span class="mu">since last replacement · ${esc(l.date)}${l.note?" — "+esc(l.note):""}</span>`}
+function battHist(t){const L=(t.batteryLog||[]).map((e,i)=>({...e,_i:i})).sort(desc);const leg=t.battery&&t.battery.date&&!L.length?`<div class="h"><b>Battery replaced</b> <small>${esc(D(t.battery.date))} · earlier record</small><div>${esc(t.battery.note)}</div>${delBtn("battery",0)}</div>`:"";return leg+(L.map(e=>`<div class="h"><b>Battery replaced</b> <small>${esc(D(e.date))} · ${esc(e.by||"")}</small>${e.note?`<div>${esc(e.note)}</div>`:""}${delBtn("batteryLog",e._i)}</div>`).join("")||(leg?"":'<div class="mu">None recorded.</div>'))}
+function battLine(t){const l=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);if(!l)return '<span class="mu">No record</span>';return `<span style="font-size:22px;font-weight:700">${dTxt(daysSince(l.date))}</span> <span class="mu">since last replacement · ${esc(D(l.date))}${l.note?" — "+esc(l.note):""}</span>`}
 function batterySec(t,w){return `<div class="sec"><h3>Battery</h3>${battLine(t)}
- ${w?`<div class="row"><input type="date" id="bd" value="${today()}"><input id="bn" placeholder="Notes (brand, qty…)"><button class="p" data-act="bat">Log battery replacement</button></div>`:""}
+ ${w?`<div class="row">${dateField("bd",today())}<input id="bn" placeholder="Notes (brand, qty…)"><button class="p" data-act="bat">Log battery replacement</button></div>`:""}
  <details style="margin-top:8px"><summary>Replacement history</summary>${battHist(t)}</details></div>`}
 function reportHTML(t){
  const odl=[...(t.odoLog||[])].sort((a,b)=>b.date.localeCompare(a.date)||b.odo-a.odo),hist=[...(t.history||[])].sort(desc),parts=plist(t);
  const tb=(h,rows)=>rows.length?`<table class="rt"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`:'<div class="mu">None recorded.</div>';
- return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Vehicle Report — ${esc(t.fleetNo)}</h2><small class="mu">Generated ${kat(now())}${me?" by "+esc(me):""}</small></div></div>
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Vehicle Report — ${esc(t.fleetNo)}</h2><small class="mu">Generated ${D(kat(now()))}${me?" by "+esc(me):""}</small></div></div>
  <h4>Vehicle information</h4>${infoGrid(t)}
- <h4>Operational summary</h4><div class="ig"><div><small>Status</small><b>${t.status==="online"?"Online":"Offline"}</b></div><div><small>Current odometer</small><b>${km(t.odo||0)}</b></div><div><small>Last maintenance</small><b>${esc(lastMaint(t))}</b></div><div><small>Open part requests</small><b>${parts.filter(p=>OPEN.includes(p.status)).length}</b></div></div>
+ <h4>Operational summary</h4><div class="ig"><div><small>Status</small><b>${t.status==="online"?"Online":"Offline"}</b></div><div><small>Current odometer</small><b>${km(t.odo||0)}</b></div><div><small>Last maintenance</small><b>${esc(D(lastMaint(t)))}</b></div><div><small>Open part requests</small><b>${parts.filter(p=>OPEN.includes(p.status)).length}</b></div></div>
  <h4>Status history</h4>${statusHTML(t,false)}
- <h4>Odometer readings</h4>${tb(["Date","Reading","Source","By"],odl.map(o=>`<tr><td>${esc(o.date)}</td><td>${km(o.odo)}</td><td>${esc(o.src)}</td><td>${esc(o.by)}</td></tr>`))}
+ <h4>Odometer readings</h4>${tb(["Date","Reading","Source","By"],odl.map(o=>`<tr><td>${esc(D(o.date))}</td><td>${km(o.odo)}</td><td>${esc(o.src)}</td><td>${esc(o.by)}</td></tr>`))}
  <h4>Tires</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
  <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
- <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(kat(l.at))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
- <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(kat(l.at))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
- <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
+ <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(D(h.date))}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
 const PW_ST=["Open","In progress","Waiting for parts","Done","Cancelled"],PW_PR=["Low","Normal","High","Urgent"];
 const pwl=t=>t.pendingWorks||[];
 const pwOpen=t=>pwl(t).filter(x=>x.status!=="Done"&&x.status!=="Cancelled");
 const pwCls=x=>x.priority==="Urgent"?"off":x.priority==="High"?"pw":"pb";
 function pendingCell(t){const o=pwOpen(t);if(!o.length)return '<span class="b pn">None</span>';const u=o.filter(x=>x.priority==="Urgent").length;return `<span class="b ${u?"off":"pw"}">${o.length} open</span>${u?`<span class="b off">${u} urgent</span>`:""}`}
 function pwCard(x,wr){
- const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(kat(l.at))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(D(kat(l.at)))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
  return `<div class="part"><div class="hd"><b>${esc(x.title)}</b><span><span class="b ${pwCls(x)}">${esc(x.priority)}</span><span class="b pn">${esc(x.status)}</span>${delBtnId("pendingWorks",x.id)}</span></div>
  ${x.desc?`<div class="mu">${esc(x.desc)}</div>`:""}
  ${wr?`<div class="row"><select data-ws="${esc(x.id)}">${PW_ST.map(v=>`<option${v===x.status?" selected":""}>${v}</option>`).join("")}</select><input data-wn="${esc(x.id)}" placeholder="Note / progress"><button data-act="wupd" data-wid="${esc(x.id)}">Update</button></div>`:""}
@@ -277,12 +292,12 @@ function collectActivity(from,to){
  });
  return A.sort((a,b)=>b.d.localeCompare(a.d)||String(b.tm).localeCompare(String(a.tm))||nfx(a.t,b.t))}
 function actHTML(from,to,A){
- const fd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+ const fd=d=>D(d);
  const C={Maintenance:"pb",Battery:"on",Tires:"pn","Spare part":"pw","Pending work":"off"};
  const cnt=c=>A.filter(x=>x.c===c).length;let rows="",last="";
  A.forEach(x=>{if(x.d!==last){last=x.d;rows+=`<tr class="dg"><td colspan="5">${fd(x.d)}</td></tr>`}
   rows+=`<tr><td><b>${esc(x.t)}</b></td><td><span class="b ${C[x.c]}">${x.c}</span></td><td>${esc(x.a)}</td><td>${esc(x.x)}</td><td>${esc(x.by)}${x.tm?`<br><span class="mu">${esc(x.tm)}</span>`:""}</td></tr>`});
- return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Activity Report</h2><small class="mu">${fd(from)} – ${fd(to)} · Generated ${kat(now())}${me?" by "+esc(me):""}</small></div></div>
+ return `<div class="rep"><div class="rh"><svg viewBox="0 0 250 34" style="height:28px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg><div style="text-align:right"><h2>Activity Report</h2><small class="mu">${fd(from)} – ${fd(to)} · Generated ${D(kat(now()))}${me?" by "+esc(me):""}</small></div></div>
  <h4>Summary</h4><div class="ig"><div><small>Total activities</small><b>${A.length}</b></div><div><small>Trucks involved</small><b>${new Set(A.map(x=>x.t)).size}</b></div>${Object.keys(C).map(c=>`<div><small>${c}</small><b>${cnt(c)}</b></div>`).join("")}</div>
  <h4>Activities (newest first)</h4>${A.length?`<table class="rt"><thead><tr><th>Truck</th><th>Type</th><th>Activity</th><th>Details</th><th>Logged by</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="mu">No activity was logged in this period.</div>'}</div>`}
 function showActivity(from,to){$("actbody").innerHTML=actHTML(from,to,collectActivity(from,to));$("actdlg").showModal()}
@@ -291,8 +306,31 @@ function statusHTML(t,adm){
  const L=(t.statusLog||[]).map((e,i)=>({...e,_i:i})).sort((a,b)=>kat(a.at).localeCompare(kat(b.at)));
  const ms=a=>Date.parse(kat(a).replace(" ","T")+":00Z");
  L.forEach((e,i)=>{const nx=L[i+1];e.ongoing=e.s==="offline"&&!nx;e.dur=e.s==="offline"?fmtDur(Math.max(0,(nx?ms(nx.at):Date.now()+KSA)-ms(e.at))):""});
- return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(kat(e.at))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
+ return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(D(kat(e.at)))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
 function statusSec(t){return `<div class="sec"><h3>Status history</h3>${statusHTML(t,true)}</div>`}
+const AL={bat:330,pw:7,need:21,ord:45,off:7,bk:14};
+let lastBackup=null,metaLoaded=false;
+const dAgo=a=>a?daysSince(kat(a).slice(0,10)):0;
+function computeAlerts(){const A=[];
+ const add=(t,type,sec,txt,n,thr)=>A.push({id:t.id,t:t.fleetNo,type,sec,txt,days:n,sev:(n>=2*thr||(type==="Battery"&&n>=365))?"high":"warn"});
+ trucks.forEach(t=>{
+  const bl=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);
+  if(bl){const n=daysSince(bl.date);if(n>=AL.bat)add(t,"Battery","Battery",n+" days since the last battery replacement"+(n<365?" ("+(365-n)+" days left to one year)":" (over one year)"),n,AL.bat)}
+  pwOpen(t).forEach(w=>{const lg=(w.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);if(n>=AL.pw)add(t,"Pending work","Pending works","\""+w.title+"\" has had no update for "+n+" days",n,AL.pw)});
+  plist(t).forEach(p=>{const lg=(p.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);
+   if(p.status==="needed"&&n>=AL.need)add(t,"Spare part","Spare parts","\""+p.name+"\" has been needed for "+n+" days and is not ordered",n,AL.need);
+   if(p.status==="ordered"&&n>=AL.ord)add(t,"Spare part","Spare parts","\""+p.name+"\" was ordered "+n+" days ago with no update",n,AL.ord)});
+  if(t.status==="offline"){const sl=(t.statusLog||[]).filter(x=>x.s==="offline").slice(-1)[0];if(sl){const n=dAgo(sl.at);if(n>=AL.off)add(t,"Offline","Status & odometer","Offline for "+n+" days",n,AL.off)}}
+ });
+ if(isAdmin()&&metaLoaded){
+  if(!lastBackup)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"No backup has been recorded yet. Export one from the Reports tab.",days:-1,sev:"warn"});
+  else{const n=dAgo(lastBackup);if(n>=AL.bk)A.push({id:"__backup",t:"Backup",type:"Reminder",sec:"",txt:"The last backup was "+n+" days ago. Export a new one from the Reports tab.",days:n,sev:n>=2*AL.bk?"high":"warn"})}}
+ return A.sort((a,b)=>(a.sev==="high"?0:1)-(b.sev==="high"?0:1)||b.days-a.days)}
+function updateBell(){const A=computeAlerts();$("bdg").textContent=A.length;$("bdg").hidden=!A.length}
+async function loadMeta(){try{const {data,error}=await sb.from("app_meta").select("v").eq("k","last_backup").maybeSingle();
+  if(error)throw error;lastBackup=data?data.v:null}catch(e){try{lastBackup=localStorage.getItem("lastBackup")}catch(x){}}
+ metaLoaded=true;updateBell()}
+async function saveBackupStamp(){const v=now();lastBackup=v;try{const {error}=await sb.from("app_meta").upsert({k:"last_backup",v});if(error)throw error}catch(e){try{localStorage.setItem("lastBackup",v)}catch(x){}}updateBell()}
 function secSummary(k,t){
  const act=plist(t).filter(p=>OPEN.includes(p.status)).length;
  if(k==="Vehicle information")return [t.make,t.model,t.year].filter(Boolean).join(" · ");
@@ -318,8 +356,8 @@ function detail(id){
  const t=trucks.find(x=>x.id===id);if(!t)return;if(openId!==id||!$("dlg").open)openSecs.clear();openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
  const w=canWrite;
- const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(h.date)} · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
- const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(c.date)+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
+ const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(D(h.date))} · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
+ const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(D(c.date))+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
  ${infoSec(t,w)}<div class="sec"><h3>Status &amp; odometer</h3><span class="b ${t.status==="online"?"on":"off"}">${t.status==="online"?"Online":"Offline"}</span> <b>${Number(t.odo||0).toLocaleString()} km</b>
@@ -330,7 +368,7 @@ function detail(id){
  ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
  ${pendingSec(t,w)}${batterySec(t,w)}${tireSec(t,w)}
- ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row"><input type="date" id="hd" value="${today()}"><select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
+ ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
  <div class="sec"><h3>Maintenance history</h3>${hist}</div>
  ${isAdmin()?`<div class="sec" style="border-color:#d5001c"><h3>Delete truck</h3><div class="mu">Permanently removes this truck and all its records.</div><div class="row"><button data-act="deltruck" style="color:#d5001c;border-color:#d5001c">Delete this truck</button></div></div>`:""}`;
  if(w)$("st").value=t.status;foldify(t);loadPhotos($("dbody"));
@@ -339,8 +377,8 @@ function detail(id){
 $("dbody").addEventListener("click",e=>{
  const a=e.target.dataset.act;if(!a||!canWrite)return;const t=trucks.find(x=>x.id===openId);if(!t)return;
  if(a==="sto"){const o=$("od").value,ns=$("st").value;save(t,{status:ns,...(ns!==t.status?{statusLog:[...(t.statusLog||[]),{s:ns,by:me,at:now()}]}:{}),...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
- else if(a==="bat"){save(t,{batteryLog:[...(t.batteryLog||[]),{date:$("bd").value,note:$("bn").value.trim(),by:me}]})}
- else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");save(t,{tireLog:[...(t.tireLog||[]),{date:$("td").value,scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
+ else if(a==="bat"){if(!dv("bd"))return alert(DATE_MSG);save(t,{batteryLog:[...(t.batteryLog||[]),{date:dv("bd"),note:$("bn").value.trim(),by:me}]})}
+ else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");if(!dv("td"))return alert(DATE_MSG);save(t,{tireLog:[...(t.tireLog||[]),{date:dv("td"),scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
  else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;openSecs.add("Edit vehicle information");detail(openId)}
  else if(a==="cancelinfo"){editInfo=false;openSecs.add("Vehicle information");detail(openId)}
  else if(a==="dellog"){if(!isAdmin())return;const k=e.target.dataset.k,i=e.target.dataset.i,id=e.target.dataset.id;
@@ -352,11 +390,11 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{const ps=(t.history||[]).flatMap(h=>h.photos||[]);if(ps.length)sb.storage.from(PHB).remove(ps);trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
  else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
- else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
+ else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v||!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
   if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
   else save(t,{...v,order:""})}
- else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");const fl=[...$("hp").files];if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
-  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:$("hd").value,type:$("ht").value,note:n,by:me,photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
+ else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");if(!dv("hd"))return alert(DATE_MSG);const fl=[...$("hp").files];if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
+  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:$("ht").value,note:n,by:me,photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
  else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
   const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
   save(t,{partsList:[...plist(t),p]})}
@@ -369,7 +407,7 @@ $("dbody").addEventListener("change",e=>{if(e.target.id==="tsc")$("tax").hidden=
 $("rb").onclick=()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;$("rbody").innerHTML=reportHTML(t);$("rdlg").showModal();loadPhotos($("rbody"))};
 $("rx").onclick=()=>$("rdlg").close();
 document.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>{const n=+b.dataset.ar,to=today(),d=new Date(to+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-(n-1));showActivity(d.toISOString().slice(0,10),to)});
-$("arc").onclick=()=>{const f=$("arf").value,t=$("art").value;if(!f||!t)return alert("Choose both a start date and an end date.");if(f>t)return alert("The start date must be before the end date.");showActivity(f,t)};
+$("arc").onclick=()=>{const f=dv("arf"),t=dv("art");if(f===null||t===null)return alert(DATE_MSG);if(!f||!t)return alert("Choose both a start date and an end date.");if(f>t)return alert("The start date must be before the end date.");showActivity(f,t)};
 $("actx").onclick=()=>$("actdlg").close();
 $("actp").onclick=()=>{try{window.print()}catch(e){alert("Printing is not available here — use Download.")}};
 $("actd").onclick=async()=>{const d=await claude.use("downloads");if(!d)return alert("Download is not available — use Print.");
@@ -392,7 +430,7 @@ $("srt").addEventListener("input",()=>{try{localStorage.setItem("srt",$("srt").v
 ["q","fs","fp","pf","srt"].forEach(i=>$(i).addEventListener("input",render));
 $("addBtn").onclick=()=>$("adlg").showModal();
 $("addFields").innerHTML=infoForm("a",{axles:4});
-$("addOne").onclick=async()=>{const v=readInfo("a");if(!v.fleetNo)return alert("Fleet number is required.");
+$("addOne").onclick=async()=>{const v=readInfo("a");if(!v||!v.fleetNo)return alert("Fleet number is required.");
  await col.doc().set({...v,order:v.order||String(Math.max(0,...trucks.map(t=>+t.order||0))+1),status:"online",odo:0,partsList:[],batteryLog:[],tireLog:[],odoLog:[],history:[]}).catch(e=>alert(e.message||e.code));
  $("addFields").innerHTML=infoForm("a",{axles:4});$("adlg").close()};
 $("bulkGo").onclick=async()=>{
@@ -436,7 +474,7 @@ async function start(){
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
  {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
- $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();
+ $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();if(isAdmin())loadMeta();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
 }
@@ -487,9 +525,9 @@ $("bkGo").onclick=async()=>{if(!isAdmin())return;const msg=$("bkMsg"),btn=$("bkG
    const {data,error:er}=await sb.storage.from(PHB).download(paths[i]);
    if(er||!data){miss.push(paths[i]);continue}
    files.push({name:"photos/"+paths[i],data:new Uint8Array(await data.arrayBuffer())});ok++}
-  files.push({name:"README.txt",data:enc.encode("Fleet dashboard backup\nCreated: "+kat(now())+" (KSA time) by "+me+"\nTrucks: "+rows.length+"\nPhotos: "+ok+(miss.length?"\nPhotos that could not be read ("+miss.length+"):\n"+miss.join("\n"):"")+"\n\nTo restore: Reports tab > Backup and restore > choose this zip > Restore from backup.\nKeep the folder and file names inside the photos folder unchanged.\n")});
+  files.push({name:"README.txt",data:enc.encode("Fleet dashboard backup\nCreated: "+D(kat(now()))+" (KSA time) by "+me+"\nTrucks: "+rows.length+"\nPhotos: "+ok+(miss.length?"\nPhotos that could not be read ("+miss.length+"):\n"+miss.join("\n"):"")+"\n\nTo restore: Reports tab > Backup and restore > choose this zip > Restore from backup.\nKeep the folder and file names inside the photos folder unchanged.\n")});
   const d=await claude.use("downloads");await d.save({filename:"Fleet-backup-"+now().slice(0,16).replace(/[: ]/g,"-")+".zip",data:makeZip(files),type:"application/zip"});
-  msg.textContent="Done: "+rows.length+" trucks, "+ok+" photos"+(miss.length?", "+miss.length+" photos could not be read":"")+". Keep the file safe.";
+  await saveBackupStamp();msg.textContent="Done: "+rows.length+" trucks, "+ok+" photos"+(miss.length?", "+miss.length+" photos could not be read":"")+". Keep the file safe.";
  }catch(e){msg.textContent="Backup failed: "+(e.message||e)}finally{btn.disabled=false}};
 $("rsGo").onclick=async()=>{if(!isAdmin())return;const f=$("rsFile").files[0];if(!f)return alert("Choose a backup zip file first.");
  if(!confirm("Restore from this backup?\\n\\nTrucks that already exist are NOT changed. Only missing trucks and missing photos are added."))return;
@@ -507,5 +545,16 @@ $("rsGo").onclick=async()=>{if(!isAdmin())return;const f=$("rsFile").files[0];if
    if(!e3)up++;else if(/exist|duplicate/i.test(e3.message||""))sk++;else fail++}
   msg.textContent="Done. Trucks added: "+added+" (already there: "+skipped+"). Photos added: "+up+" (already there: "+sk+")"+(fail?", failed: "+fail:"")+".";
  }catch(e){msg.textContent="Restore failed: "+(e.message||e)}finally{btn.disabled=false}};
+$("arfW").outerHTML=dateField("arf","");$("artW").outerHTML=dateField("art","");
+document.addEventListener("input",e=>{const el=e.target;if(!(el.matches&&el.matches(".df input[type=text]")))return;
+ const m=el.value.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);if(m){el.value=m[3]+"/"+m[2].padStart(2,"0")+"/"+m[1].padStart(2,"0");return}
+ const d=el.value.replace(/\D/g,"").slice(0,8);el.value=d.slice(0,4)+(d.length>4?"/"+d.slice(4,6):"")+(d.length>6?"/"+d.slice(6,8):"")});
+document.addEventListener("click",e=>{const b=e.target.closest(".dpk");if(!b)return;e.preventDefault();const n=b.parentNode.querySelector(".dnat");n.value=dv(b.dataset.dp)||today();try{n.showPicker()}catch(x){n.focus();n.click()}});
+document.addEventListener("change",e=>{const n=e.target;if(n.classList&&n.classList.contains("dnat"))n.parentNode.querySelector("input[type=text]").value=D(n.value)});
+$("bell").onclick=()=>{const A=computeAlerts();$("ntlist").innerHTML=A.length?A.map(a=>`<div class="nt ${a.sev==="high"?"":"warn"}" data-tid="${esc(a.id)}" data-sec="${esc(a.sec)}"><b>${esc(a.t)} · ${esc(a.type)}</b><span>${esc(a.txt)}</span></div>`).join(""):'<div class="sec mu">No alerts. Everything is on track.</div>';$("ntdlg").showModal()};
+$("ntx").onclick=()=>$("ntdlg").close();
+$("ntlist").addEventListener("click",e=>{const it=e.target.closest("[data-tid]");if(!it)return;$("ntdlg").close();
+ if(it.dataset.tid==="__backup"){document.querySelector('[data-v="reports"]').click();return}
+ detail(it.dataset.tid);const d=document.querySelector('#dbody details.fold[data-k="'+it.dataset.sec+'"]');if(d)d.open=true});
 boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
 </script></body></html>
