@@ -310,7 +310,7 @@ function statusHTML(t,adm){
  L.forEach((e,i)=>{const nx=L[i+1];e.ongoing=e.s==="offline"&&!nx;e.dur=e.s==="offline"?fmtDur(Math.max(0,(nx?ms(nx.at):Date.now()+KSA)-ms(e.at))):""});
  return L.reverse().map(e=>`<div class="h"><span class="b ${e.s==="online"?"on":"off"}">${e.s==="online"?"Back online":"Went offline"}</span> <b>${esc(D(kat(e.at)))}</b> <small>${esc(e.by||"")}</small>${e.s==="offline"?`<div class="mu">${e.ongoing?"Offline so far: ":"Offline for: "}${e.dur}</div>`:""}${adm?delBtn("statusLog",e._i):""}</div>`).join("")||'<div class="mu">No status changes recorded yet. Changes made from now on will appear here.</div>'}
 function statusSec(t){return `<div class="sec"><h3>Status history</h3>${statusHTML(t,true)}</div>`}
-const AL={bat:330,pw:7,need:21,ord:45,off:7,bk:14};
+const AL={bat:330,pw:7,pwWait:30,need:21,ord:45,off:7,bk:14};
 let lastBackup=null,metaLoaded=false,alertState={},showHid=false;
 const dAgo=a=>a?daysSince(kat(a).slice(0,10)):0;
 const addDays=n=>{const d=new Date(today()+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
@@ -320,7 +320,7 @@ function computeAll(){if(!metaLoaded)return [];const A=[];
  trucks.forEach(t=>{
   const bl=[...(t.batteryLog||[])].sort(desc)[0]||(t.battery&&t.battery.date?t.battery:null);
   if(bl){const n=daysSince(bl.date);if(n>=AL.bat)add(t,"Battery","Battery",n+" days since the last battery replacement"+(n<365?" ("+(365-n)+" days left to one year)":" (over one year)"),n,AL.bat,"bat:"+t.id,bl.date)}
-  pwOpen(t).forEach(w=>{const lg=(w.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);if(n>=AL.pw)add(t,"Pending work","Pending works","\""+w.title+"\" has had no update for "+n+" days",n,AL.pw,"pw:"+t.id+":"+w.id,lg&&lg.at)});
+  pwOpen(t).forEach(w=>{const lg=(w.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at),wt=w.status==="Waiting for parts",thr=wt?AL.pwWait:AL.pw;if(n>=thr)add(t,"Pending work","Pending works","\""+w.title+"\" "+(wt?"has been waiting for parts for "+n+" days":"has had no update for "+n+" days"),n,thr,"pw:"+t.id+":"+w.id,lg&&lg.at)});
   plist(t).forEach(p=>{const lg=(p.log||[]).slice(-1)[0],n=dAgo(lg&&lg.at);
    if(p.status==="needed"&&n>=AL.need)add(t,"Spare part","Spare parts","\""+p.name+"\" has been needed for "+n+" days and is not ordered",n,AL.need,"need:"+t.id+":"+p.id,lg&&lg.at);
    if(p.status==="ordered"&&n>=AL.ord)add(t,"Spare part","Spare parts","\""+p.name+"\" was ordered "+n+" days ago with no update",n,AL.ord,"ord:"+t.id+":"+p.id,lg&&lg.at)});
