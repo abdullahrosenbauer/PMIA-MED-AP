@@ -99,6 +99,11 @@ details.fold[open]>summary .sum{display:none}
 @media (max-width:900px),(pointer:coarse) and (max-width:1100px){.row>.df{flex:1 1 100%}}
 .nt.hid{opacity:.7;border-left-color:var(--bd)}
 .ntc{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ntc select,.ntc button{padding:4px 8px;font-size:13px}
+.wsel{border:1px solid var(--inb);background:var(--card);border-radius:3px;margin-top:8px}
+.wsel>summary{padding:9px 10px;font-size:15px;color:var(--tx);cursor:pointer}
+.wsel>div{padding:4px 10px 8px;border-top:1px solid var(--bd)}
+.wsel label{display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:15px;color:var(--tx)}
+.wsel input[type=checkbox]{flex:none;min-width:0;min-height:0;width:18px;height:18px}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -371,11 +376,14 @@ function foldify(t){
   d.appendChild(sm);while(sec.firstChild)d.appendChild(sec.firstChild);
   d.addEventListener("toggle",()=>{d.open?openSecs.add(key):openSecs.delete(key)});
   sec.replaceWith(d)})}
+const TEAM=["Omer Hefnei","Jhon Lery","Ian Frederick","Ermel Orque","Abdullah Albulushi"];
+function withSel(){const mine=(me||"").split(/[ .@]/)[0].toLowerCase();const L=TEAM.filter(n=>n.split(" ")[0].toLowerCase()!==mine);
+ return `<details class="wsel"><summary>Worked with (optional)</summary><div id="hwith">${L.map(n=>`<label><input type="checkbox" value="${esc(n)}"> ${esc(n)}</label>`).join("")}</div></details>`}
 function detail(id){
  const t=trucks.find(x=>x.id===id);if(!t)return;if(openId!==id||!$("dlg").open)openSecs.clear();openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
  const w=canWrite;
- const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(D(h.date))} · ${esc(h.by||"")}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
+ const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(D(h.date))} · ${esc(h.by||"")}${h.with&&h.with.length?" · with "+esc(h.with.join(", ")):""}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
  const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(D(c.date))+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
@@ -387,7 +395,7 @@ function detail(id){
  ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
  ${pendingSec(t,w)}${batterySec(t,w)}${tireSec(t,w)}
- ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
+ ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div>${withSel()}</div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
  <div class="sec"><h3>Maintenance history</h3>${hist}</div>
  ${isAdmin()?`<div class="sec" style="border-color:#d5001c"><h3>Delete truck</h3><div class="mu">Permanently removes this truck and all its records.</div><div class="row"><button data-act="deltruck" style="color:#d5001c;border-color:#d5001c">Delete this truck</button></div></div>`:""}`;
  if(w)$("st").value=t.status;foldify(t);loadPhotos($("dbody"));
@@ -412,8 +420,8 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v||!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
   if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
   else save(t,{...v,order:""})}
- else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");if(!dv("hd"))return alert(DATE_MSG);const fl=[...$("hp").files];if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
-  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:$("ht").value,note:n,by:me,photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
+ else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");if(!dv("hd"))return alert(DATE_MSG);const fl=[...$("hp").files],wl=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
+  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:$("ht").value,note:n,by:me,...(wl.length?{with:wl}:{}),photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
  else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
   const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
   save(t,{partsList:[...plist(t),p]})}
@@ -564,6 +572,7 @@ $("rsGo").onclick=async()=>{if(!isAdmin())return;const f=$("rsFile").files[0];if
    if(!e3)up++;else if(/exist|duplicate/i.test(e3.message||""))sk++;else fail++}
   msg.textContent="Done. Trucks added: "+added+" (already there: "+skipped+"). Photos added: "+up+" (already there: "+sk+")"+(fail?", failed: "+fail:"")+".";
  }catch(e){msg.textContent="Restore failed: "+(e.message||e)}finally{btn.disabled=false}};
+document.addEventListener("change",e=>{const t=e.target;if(t.closest&&t.closest("#hwith")){const v=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);t.closest("details").querySelector("summary").textContent=v.length?"Worked with: "+v.join(", "):"Worked with (optional)"}});
 $("arfW").outerHTML=dateField("arf","");$("artW").outerHTML=dateField("art","");
 document.addEventListener("input",e=>{const el=e.target;if(!(el.matches&&el.matches(".df input[type=text]")))return;
  const m=el.value.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);if(m){el.value=m[3]+"/"+m[2].padStart(2,"0")+"/"+m[1].padStart(2,"0");return}
