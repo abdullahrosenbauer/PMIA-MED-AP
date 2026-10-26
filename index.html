@@ -516,7 +516,7 @@ async function start(){
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
  {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
- $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();document.querySelector('[data-v="check"]').hidden=!isAdmin();loadMeta();
+ $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();loadMeta();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
 }
@@ -670,16 +670,16 @@ function ckRender(){
  t+=`</tbody></table></div>`;
  h+=t;
  h+=`<div class="sec" style="margin-top:12px"><h3>Observations and remarks</h3>${d.rem.map((r,k)=>`<div class="ckr"><select data-ck="rv" data-r="${k}" ${ro?"disabled":""}>${opts(cfg.veh,r.v)}</select><input data-ck="rt" data-r="${k}" value="${esc(r.t)}" placeholder="Comment / remark" ${ro?"disabled":""}>${ro?"":`<button data-ckact="rdel" data-r="${k}">Remove</button>`}</div>`).join("")||'<div class="mu">No remarks.</div>'}${ro?"":'<div class="row"><button data-ckact="radd">+ Add remark</button></div>'}</div>`;
- h+=`<div class="sec" style="margin-top:12px"><div class="row" style="margin-top:0;align-items:center"><span class="mu"><b>Technician:</b></span><select data-ck="gtech" ${ro?"disabled":""} style="flex:0 1 240px"><option value="">Select technician</option>${opts(DC_TECH,CK.tech)}</select>${ro?"":`<button class="p" data-ckact="save">Save</button>`}<button class="p" data-ckact="pdf">Print / PDF (all sheets)</button><span class="mu" id="ckState">${c.dirty?"Unsaved changes":""}</span></div></div>`;
+ h+=`<div class="sec" style="margin-top:12px"><div class="row" style="margin-top:0;align-items:center"><span class="mu">Prepared by: <b>${esc(me)}</b></span>${ro?"":`<button class="p" data-ckact="save">Save</button>`}<button class="p" data-ckact="pdf">Print / PDF (all sheets)</button><span class="mu" id="ckState">${c.dirty?"Unsaved changes":""}</span></div></div>`;
  root.innerHTML=h}
 function ckMark(){const c=ckCur();if(c)c.dirty=true;const s=$("ckState");if(s)s.textContent="Unsaved changes";document.querySelectorAll(".ckst").forEach(b=>{if(b.dataset.sk===CK.sk&&!b.querySelector(".ckdot")){const q=b.querySelector(".ckok");if(q)q.remove();b.insertAdjacentHTML("beforeend",' <span class="ckdot">●</span>')}})}
 async function ckSaveOne(sk){const k=ckKey(sk),c=CK.c[k];if(!c)return;const cfg=DC_CFG.find(s=>s.key===sk);
  ckSync(cfg,c.data);
- const d=JSON.parse(JSON.stringify(c.data));d.veh.forEach(v=>delete v.oc);d.tech=CK.tech;d.by=me;d.at=now();
+ const d=JSON.parse(JSON.stringify(c.data));d.veh.forEach(v=>delete v.oc);d.tech=me;d.by=me;d.at=now();
  const {error}=await sb.from("daily_checks").upsert({id:k,day:CK.day,sheet:sk,data:d,updated_at:new Date().toISOString()});if(error)throw error;
  c.dirty=false;c.carried=null;CK.saved[sk]=1}
 async function ckSave(){try{
-  if(!CK.tech){alert("Select the technician at the bottom of the page first.");return}
+  
   const keys=DC_CFG.map(s=>s.key).filter(sk=>CK.c[ckKey(sk)]);
   if(!keys.length){alert("There is nothing to save yet.");return}
   for(const sk of keys)await ckSaveOne(sk);
@@ -705,16 +705,14 @@ async function ckPdf(){
  const out=[],miss=[];
  for(const cfg of DC_CFG){const k=ckKey(cfg.key);let d=CK.c[k]&&CK.c[k].data;
   if(!d){try{const {data:cur}=await sb.from("daily_checks").select("data").eq("id",k).maybeSingle();if(cur&&cur.data)d=ckFit(cur.data,cfg,false)}catch(e){}}
-  if(d){d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=CK.tech||d.tech||"";out.push(ckSheetHTML(CK.day,cfg,d))}else miss.push(cfg.tab)}
+  if(d){d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push(ckSheetHTML(CK.day,cfg,d))}else miss.push(cfg.tab)}
  if(!out.length)return alert("Nothing is filled in for this date yet.");
- if(!CK.tech&&!confirm("No technician is selected. The PDF will show an empty technician. Continue?"))return;
  if(miss.length&&!confirm("These sheets are not filled in for this date and will be left out:\n"+miss.join(", ")+"\n\nContinue?"))return;
  const dirty=DC_CFG.filter(s=>CK.c[ckKey(s.key)]&&CK.c[ckKey(s.key)].dirty).length;
  if(dirty&&!confirm("Some sheets have unsaved changes. They will be included in the PDF but are not saved yet. Continue?"))return;
  const p=CK.day.split("-"),title="PMIA CFR Daily Check Report _ "+p[2]+"/"+p[1]+"/"+p[0];
  printDoc(`<!DOCTYPE html><meta charset="utf-8"><title>${title}</title><style>${CK_CSS}</style>${out.join("")}`,title)}
 $("ckBody").addEventListener("change",e=>{const t=e.target,a=t.dataset.ck;if(!a)return;const c=ckCur();if(!c||!canWrite)return;const d=c.data,j=+t.dataset.j,i=+t.dataset.i,r=+t.dataset.r;
- if(a==="gtech"){CK.tech=t.value;DC_CFG.forEach(s=>{const x=CK.c[ckKey(s.key)];if(x)x.dirty=true});ckRender();return}
  if(a==="st")d.veh[j].st=t.value;else if(a==="fuel")d.veh[j].fuel=t.value;
  else if(a==="it"){d.it[i][j]=t.value;t.className="cd c-"+t.value.replace(".","")}
  else if(a==="rv")d.rem[r].v=t.value;else return;ckMark()});
