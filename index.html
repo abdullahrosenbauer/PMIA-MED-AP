@@ -229,7 +229,7 @@ function infoGrid(t){const R=[["Fleet No.",t.fleetNo],["Plate No.",t.plate],["Ty
 function infoSec(t,w){
  if(editInfo&&isAdmin())return `<div class="sec"><h3>Edit vehicle information</h3>${infoForm("e",t)}<div class="row"><button class="p" data-act="saveinfo">Save</button><button data-act="cancelinfo">Cancel</button></div></div>`;
  return `<div class="sec"><h3>Vehicle information</h3>${infoGrid(t)}${isAdmin()?`<div class="row"><button data-act="editinfo">Edit information</button></div>`:""}</div>`}
-function odoPatch(t,o,src){if(!o||o===(t.odo||0))return {};return {odo:Math.max(o,t.odo||0),odoLog:[...(t.odoLog||[]),{date:today(),odo:o,src,by:me}]}}
+function odoPatch(t,o,src){if(!o||o===(t.odo||0))return {};return {odo:o,odoLog:[...(t.odoLog||[]),{date:today(),odo:o,src,by:me}]}}
 const axl=t=>t.axles||4;
 const desc=(a,b)=>b.date.localeCompare(a.date);
 const km=n=>Number(n).toLocaleString()+" km";
@@ -418,7 +418,11 @@ function detail(id){
 }
 $("dbody").addEventListener("click",e=>{
  const a=e.target.dataset.act;if(!a||!canWrite)return;const t=trucks.find(x=>x.id===openId);if(!t)return;
- if(a==="sto"){const o=$("od").value,ns=$("st").value;save(t,{status:ns,...(ns!==t.status?{statusLog:[...(t.statusLog||[]),{s:ns,by:me,at:now()}]}:{}),...(o!==""?odoPatch(t,+o,"Manual update"):{})})}
+ if(a==="sto"){const o=$("od").value,ns=$("st").value;let op={};
+  if(o!==""){const v=+o,cur=t.odo||0;if(!(v>=0))return alert("Enter a valid odometer reading.");
+   if(v<cur&&!confirm("The new odometer ("+v.toLocaleString()+" km) is lower than the current one ("+cur.toLocaleString()+" km).\n\nUse it as a correction?"))return;
+   op=odoPatch(t,v,v<cur?"Correction":"Manual update")}
+  save(t,{status:ns,...(ns!==t.status?{statusLog:[...(t.statusLog||[]),{s:ns,by:me,at:now()}]}:{}),...op})}
  else if(a==="bat"){if(!dv("bd"))return alert(DATE_MSG);save(t,{batteryLog:[...(t.batteryLog||[]),{date:dv("bd"),note:$("bn").value.trim(),by:me}]})}
  else if(a==="tire"){const sc=$("tsc").value,ax=[1,2,3,4].filter(n=>$("ta"+n)&&$("ta"+n).checked);if(sc==="axles"&&!ax.length)return alert("Select at least one axle.");if(!dv("td"))return alert(DATE_MSG);save(t,{tireLog:[...(t.tireLog||[]),{date:dv("td"),scope:sc,axles:sc==="set"?[]:ax,note:$("tn").value.trim(),by:me}]})}
  else if(a==="editinfo"){if(!isAdmin())return;editInfo=true;openSecs.add("Edit vehicle information");detail(openId)}
