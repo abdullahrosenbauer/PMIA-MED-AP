@@ -130,7 +130,7 @@ details.fold[open]>summary .sum{display:none}
 <div><span class="role" id="role">Loading…</span> <button id="bell" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bdg" id="bdg" hidden>0</span></button> <button id="thm"></button> <button id="so">Sign out</button> <button id="addBtn" class="p" hidden>+ Add trucks</button></div>
 </header></div>
 <main>
-<div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button><button class="tab" data-v="reports">Reports</button><button class="tab" data-v="check">Daily check</button></div>
+<div class="tabs"><button class="tab on" data-v="fleet">Fleet</button><button class="tab" data-v="parts">Parts tracker</button><button class="tab" data-v="reports">Reports</button><button class="tab" data-v="check">Daily check</button><button class="tab" data-v="inventory">Inventory</button></div>
 <div class="kpis" id="kpis"></div>
 
 <div id="vFleet">
@@ -146,6 +146,7 @@ details.fold[open]>summary .sum{display:none}
 <div class="bar"><select id="pf"><option value="open">Open requests</option><option value="">All parts</option><option value="needed">Needed</option><option value="ordered">Ordered</option><option value="transit">In transit</option><option value="arrived">Arrived</option><option value="installed">Installed</option><option value="cancelled">Cancelled</option></select></div>
 <div class="wrap"><table class="cards"><thead><tr><th>Truck</th><th>Part</th><th>Qty</th><th>Status</th><th>Requested</th><th>Last update</th></tr></thead><tbody id="pt"></tbody></table><div class="empty" id="pempty" hidden>No parts to show.</div></div>
 </div>
+<div id="vInventory" hidden><div id="invBody"></div></div>
 <div id="vCheck" hidden><div id="ckBody"></div></div>
 <div id="vReports" hidden><div class="sec"><h3>Activity report (all trucks)</h3>
 <p class="mu" style="margin:0 0 12px">Lists every maintenance record, battery or tire replacement, spare part change and pending work logged in the chosen period.</p>
@@ -163,6 +164,7 @@ details.fold[open]>summary .sum{display:none}
 <dialog id="rdlg"><div class="dh noprint"><b>Truck report</b><span><button id="rp" class="p">Print / PDF</button> <button id="rd">Download</button> <button id="rx">Close</button></span></div><div class="db" id="rbody"></div></dialog>
 <dialog id="actdlg"><div class="dh noprint"><b>Activity report</b><span><button id="actp" class="p">Print / PDF</button> <button id="actd">Download</button> <button id="actx">Close</button></span></div><div class="db" id="actbody"></div></dialog>
 <dialog id="ntdlg"><div class="dh"><b>Notifications</b><button id="ntx">Close</button></div><div class="db" id="ntlist"></div></dialog>
+<dialog id="invdlg"><div class="dh"><b id="invt"></b><button id="invx">Close</button></div><div class="db" id="invdb"></div></dialog>
 <dialog id="ldlg" style="width:min(900px,96vw)"><div class="dh"><b>Photo</b><span><button id="ldel" hidden style="color:#d5001c;border-color:#d5001c">Delete photo</button> <button id="lx">Close</button></span></div><div class="db" style="text-align:center"><img id="limg" alt="" style="max-width:100%;max-height:75vh"></div></dialog>
 <dialog id="adlg"><div class="dh"><b>Add trucks</b><button id="ax">Close</button></div><div class="db"><div class="sec"><h3>Add one truck</h3><div id="addFields"></div><div class="row"><button class="p" id="addOne">Add truck</button></div></div><div class="sec"><h3>Bulk add (basic)</h3>
 <p class="mu" style="margin-top:0">One truck per line: <code>Fleet No, Plate, Name/Type</code> (plate and type optional).</p>
@@ -445,7 +447,10 @@ $("dbody").addEventListener("click",e=>{
   const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
   save(t,{partsList:[...plist(t),p]})}
  else if(a==="pupd"){const id=e.target.dataset.pid,s=document.querySelector(`[data-ps="${id}"]`).value,ref=document.querySelector(`[data-pr="${id}"]`).value.trim(),note=document.querySelector(`[data-pn="${id}"]`).value.trim();
-  save(t,{partsList:plist(t).map(p=>p.id!==id?p:{...p,status:s,ref,log:(s!==p.status||note||ref!==(p.ref||""))?[...(p.log||[]),{s,by:me,at:now(),note:note||(ref!==(p.ref||"")?"Ref: "+ref:"")}]:p.log})})}
+  (async()=>{const old=plist(t).find(x=>x.id===id);if(!old)return;let inv=old.inv||null,sfx="";
+   if(s!==old.status){const r=await invOnStatus(t,old,s);inv=r.flow;sfx=r.sfx;if(r.fail&&isAdmin())alert("The status was saved, but the inventory could not be updated. Check that the inventory SQL has been run in Supabase.")}
+   const nt=[note||(ref!==(old.ref||"")?"Ref: "+ref:""),sfx].filter(Boolean).join(" | ");
+   save(t,{partsList:plist(t).map(p=>p.id!==id?p:{...p,status:s,ref,inv:inv||null,log:(s!==p.status||note||ref!==(p.ref||"")||sfx)?[...(p.log||[]),{s,by:me,at:now(),note:nt}]:p.log})})})()}
 });
 document.addEventListener("click",e=>{const m=e.target.closest("[data-mv]");if(m){moveTruck(m.dataset.mv,+m.dataset.d);return}const r=e.target.closest("tr.r");if(r)detail(r.dataset.id)});
 $("dx").onclick=()=>{$("dlg").close();openId=null;editInfo=false};
@@ -470,7 +475,7 @@ $("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);const d=await cl
  const box=$("rbody").cloneNode(true);for(const im of box.querySelectorAll("img[data-ph]")){try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b)})}catch(e){}}if(!d)return alert("Download is not available — use Print.");
  const css="body{font:14px Arial,sans-serif;margin:24px;color:#222}h2{margin:0}h4{color:#d5001c;text-transform:uppercase;border-bottom:1px solid #ccc;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:4px 8px;text-align:left;font-size:13px}.ig,.ax,.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}small{display:block;color:#777;font-size:11px;text-transform:uppercase}.ax>div{border:1px solid #ddd;padding:6px}.h{border-left:3px solid #d5001c;padding-left:8px;margin:6px 0}.mu{color:#777}.b{padding:1px 6px;background:#eee}.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:130px;height:130px;object-fit:cover}.dbtn{display:none}";
  try{await d.save({filename:`${t.fleetNo||"truck"}-report.html`,data:`<!DOCTYPE html><meta charset="utf-8"><title>Report ${esc(t.fleetNo)}</title><style>${css}</style>${box.innerHTML}`})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}};
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("vFleet").hidden=view!=="fleet";$("vParts").hidden=view!=="parts";$("vReports").hidden=view!=="reports";$("vCheck").hidden=view!=="check";$("kpis").style.display=(view==="reports"||view==="check")?"none":"";if(view==="check")ckOpen()});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("vFleet").hidden=view!=="fleet";$("vParts").hidden=view!=="parts";$("vReports").hidden=view!=="reports";$("vCheck").hidden=view!=="check";$("vInventory").hidden=view!=="inventory";$("kpis").style.display=(view==="reports"||view==="check"||view==="inventory")?"none":"";if(view==="check")ckOpen();if(view==="inventory")invOpen()});
 try{let v=localStorage.getItem("srt");if(!v||v==="fleet")v="order";$("srt").value=v}catch(e){}
 $("srt").addEventListener("input",()=>{try{localStorage.setItem("srt",$("srt").value)}catch(e){}});
 ["q","fs","fp","pf","srt"].forEach(i=>$(i).addEventListener("input",render));
@@ -520,7 +525,7 @@ async function start(){
  canWrite=user?(await user.can("data.write"))!==false:false;
  try{me=user?((await user.me()).name||""):""}catch{}
  {const f=(uname||"").split(/[ .@]/)[0];$("role").textContent="Welcome "+(f?f.charAt(0).toUpperCase()+f.slice(1):"")+"!";$("role").title=isAdmin()?"Admin (full access)":canWrite?"Technician (can edit)":"Management (view only)"}
- $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();loadMeta();
+ $("addBtn").hidden=!isAdmin();$("bkSec").hidden=!isAdmin();document.querySelector('[data-v="inventory"]').hidden=!isAdmin();loadMeta();
  col=db.collection("trucks");
  col.onSnapshot(s=>{trucks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.fleetNo).localeCompare(String(b.fleetNo),undefined,{numeric:true}));render()},e=>{$("empty").hidden=false;$("empty").textContent="Could not load data ("+e.code+")"});
 }
@@ -566,7 +571,7 @@ $("bkGo").onclick=async()=>{if(!isAdmin())return;const msg=$("bkMsg"),btn=$("bkG
  try{msg.textContent="Reading records...";
   const {data:rows,error}=await sb.from("trucks").select("id,data,updated_at");if(error)throw error;
   const paths=[...new Set(rows.flatMap(r=>(r.data.history||[]).flatMap(h=>h.photos||[])))];
-  const enc=new TextEncoder(),files=[{name:"trucks.json",data:enc.encode(JSON.stringify(rows,null,1))}];let ok=0;const miss=[];try{const {data:dcs}=await sb.from("daily_checks").select("*");if(dcs&&dcs.length)files.push({name:"daily_checks.json",data:enc.encode(JSON.stringify(dcs,null,1))})}catch(e){}
+  const enc=new TextEncoder(),files=[{name:"trucks.json",data:enc.encode(JSON.stringify(rows,null,1))}];let ok=0;const miss=[];try{const {data:dcs}=await sb.from("daily_checks").select("*");if(dcs&&dcs.length)files.push({name:"daily_checks.json",data:enc.encode(JSON.stringify(dcs,null,1))})}catch(e){}try{for(const tb of ["inventory","inventory_moves"]){const {data:iv}=await sb.from(tb).select("*");if(iv&&iv.length)files.push({name:tb+".json",data:enc.encode(JSON.stringify(iv,null,1))})}}catch(e){}
   for(let i=0;i<paths.length;i++){msg.textContent="Downloading photos "+(i+1)+" of "+paths.length+"...";
    const {data,error:er}=await sb.storage.from(PHB).download(paths[i]);
    if(er||!data){miss.push(paths[i]);continue}
@@ -728,6 +733,72 @@ $("ckBody").addEventListener("click",e=>{const b=e.target.closest("[data-ckact]"
  else if(a==="radd"&&c&&canWrite){c.data.rem.push({v:ckCfg().veh[0],t:""});ckMark();ckRender();const ins=document.querySelectorAll('[data-ck="rt"]');if(ins.length)ins[ins.length-1].focus()}
  else if(a==="rdel"&&c&&canWrite){c.data.rem.splice(+b.dataset.r,1);ckMark();ckRender()}});
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="ckd"||(t.classList&&t.classList.contains("dnat")&&t.parentNode.querySelector("#ckd")))ckDateChanged()});
+
+/* ================= INVENTORY (admin) ================= */
+let INV={items:[],err:"",built:false,ch:null};
+const invNorm=s=>String(s||"").trim().toLowerCase().replace(/\s+/g," ");
+const invLabel=it=>it.truck_id?String(it.truck_label||((trucks.find(t=>t.id===it.truck_id)||{}).fleetNo)||"Truck").split(" _ ")[0]:"General stock";
+async function invLoad(){try{const {data,error}=await sb.from("inventory").select("*").order("name");if(error)throw error;INV.items=data||[];INV.err=""}catch(e){INV.err=e.message||String(e)}invRows()}
+function invOpen(){if(!isAdmin())return;invBuild();invLoad();
+ if(!INV.ch){try{INV.ch=sb.channel("inv").on("postgres_changes",{event:"*",schema:"public",table:"inventory"},()=>invLoad()).subscribe()}catch(e){}}}
+function invBuild(){if(INV.built)return;INV.built=true;
+ $("invBody").innerHTML=`<div class="sec"><div class="row" style="margin-top:0"><input type="search" id="invq" placeholder="Search part, part no. or truck" style="flex:2"><select id="invf" style="flex:1"></select><button class="p" id="invadd">+ Add item</button></div><div class="mu" id="invsum" style="margin-top:8px"></div></div><div id="inverr"></div>
+ <div class="wrap"><table class="cards"><thead><tr><th>Part</th><th>Part no.</th><th>Assigned to</th><th>Qty available</th><th>Actions</th></tr></thead><tbody id="invtb"></tbody></table><div class="empty" id="invempty" hidden>No inventory items yet.</div></div>`;
+ $("invq").addEventListener("input",invRows);$("invf").addEventListener("input",invRows);$("invadd").onclick=()=>invForm();
+ $("invtb").addEventListener("click",invClick)}
+function invRows(){if(!INV.built)return;
+ const sel=$("invf"),cur=sel.value||"all";
+ sel.innerHTML='<option value="all">All items</option><option value="general">General workshop stock</option><option value="trucks">Truck-specific only</option>'+[...trucks].sort((a,b)=>nfx(a.fleetNo,b.fleetNo)).map(t=>`<option value="t:${esc(t.id)}">Truck: ${esc(String(t.fleetNo).split(" _ ")[0])}</option>`).join("");
+ sel.value=[...sel.options].some(o=>o.value===cur)?cur:"all";
+ const q=invNorm($("invq").value),f=sel.value;
+ const rows=INV.items.filter(it=>(f==="all"||(f==="general"&&!it.truck_id)||(f==="trucks"&&it.truck_id)||f==="t:"+it.truck_id)&&(!q||invNorm([it.name,it.part_no,invLabel(it)].join(" ")).includes(q)));
+ $("invtb").innerHTML=rows.map(it=>`<tr><td><b>${esc(it.name)}</b>${it.note?`<br><span class="mu">${esc(it.note)}</span>`:""}</td><td data-l="Part no.">${esc(it.part_no)||"-"}</td><td data-l="Assigned to"><span class="b ${it.truck_id?"pb":"pn"}">${esc(invLabel(it))}</span></td><td data-l="Qty available"><b style="font-size:18px">${esc(it.qty_available)}</b></td><td data-l="Actions"><button data-inv="adj" data-id="${esc(it.id)}">Adjust</button> <button data-inv="hist" data-id="${esc(it.id)}">History</button> <button data-inv="edit" data-id="${esc(it.id)}">Edit</button> <button data-inv="del" data-id="${esc(it.id)}" style="color:#d5001c">Delete</button></td></tr>`).join("");
+ $("invempty").hidden=rows.length>0;$("invempty").textContent=INV.items.length?"No items match the search.":"No inventory items yet.";
+ const units=INV.items.reduce((n,x)=>n+(+x.qty_available||0),0),gen=INV.items.filter(x=>!x.truck_id).length;
+ $("invsum").textContent=INV.items.length+" items | "+units+" units in stock | "+gen+" general | "+(INV.items.length-gen)+" truck-specific";
+ $("inverr").innerHTML=INV.err?`<div class="sec" style="border-color:var(--pr)"><b>Could not load the inventory.</b><div class="mu">${esc(INV.err)}</div><div class="mu">If this is the first time, run the inventory SQL in Supabase (supabase-inventory.sql).</div></div>`:""}
+function invDlg(title,html){$("invt").textContent=title;$("invdb").innerHTML=html;if(!$("invdlg").open)$("invdlg").showModal()}
+function invForm(it){const ed=!!it,v=k=>ed?esc(it[k]||""):"";
+ const tOpts=[...trucks].sort((a,b)=>nfx(a.fleetNo,b.fleetNo)).map(t=>`<option value="${esc(t.id)}"${ed&&it.truck_id===t.id?" selected":""}>${esc(t.fleetNo)}</option>`).join("");
+ invDlg(ed?"Edit item":"Add item",`<div class="sec"><div class="fg"><label>Part name *<input id="ifn" value="${v("name")}"></label><label>Part number<input id="ifp" value="${v("part_no")}"></label><label>Assigned to<select id="ifa"><option value="">General workshop stock</option>${tOpts}</select></label>${ed?`<label>Quantity available<input value="${esc(it.qty_available)}" disabled></label>`:'<label>Starting quantity<input id="ifq" type="number" min="0" value="0"></label>'}</div><label class="mu" style="display:block;margin-top:10px;font-size:12px">NOTES<input id="ifno" style="width:100%" value="${v("note")}"></label>${ed?'<p class="mu" style="margin-bottom:0">To change the quantity, use Adjust, so the change is recorded in the history.</p>':""}<div class="row"><button class="p" id="ifs">Save</button></div></div>`);
+ if(ed&&!it.truck_id)$("ifa").value="";
+ $("ifs").onclick=async()=>{if(!isAdmin())return;const name=$("ifn").value.trim();if(!name)return alert("Enter the part name.");
+  const tid=$("ifa").value,tr=trucks.find(t=>t.id===tid),base={name,part_no:$("ifp").value.trim(),truck_id:tid||null,truck_label:tr?tr.fleetNo:null,note:$("ifno").value.trim()};
+  try{
+   if(ed){const {error}=await sb.from("inventory").update({...base,updated_at:new Date().toISOString()}).eq("id",it.id);if(error)throw error}
+   else{const q=Math.max(0,parseInt($("ifq").value)||0);const {data,error}=await sb.from("inventory").insert({...base,qty_available:0}).select("id").single();if(error)throw error;
+    if(q>0)await invAdj(data.id,q,"Initial stock","")}
+   $("invdlg").close();invLoad()}catch(e){alert("Could not save: "+(e.message||e))}}}
+function invAdjForm(it){
+ invDlg("Adjust: "+it.name,`<div class="sec"><p style="margin-top:0">${esc(invLabel(it))} - available now: <b>${esc(it.qty_available)}</b></p><div class="fg"><label>Change<select id="iad"><option value="1">Add stock (+)</option><option value="-1">Remove stock (-)</option></select></label><label>Amount<input id="iaq" type="number" min="1" value="1"></label><label>Reason<select id="iar"><option>Received</option><option>Used</option><option>Returned</option><option>Correction</option><option>Other</option></select></label></div><label class="mu" style="display:block;margin-top:10px;font-size:12px">NOTE (OPTIONAL)<input id="ian" style="width:100%"></label><div class="row"><button class="p" id="ias">Save</button></div></div>`);
+ $("ias").onclick=async()=>{if(!isAdmin())return;const n=parseInt($("iaq").value);if(!(n>=1))return alert("Enter an amount of 1 or more.");
+  const d=(+$("iad").value)*n;if(d<0&&-d>it.qty_available&&!confirm("This removes more than the available quantity ("+it.qty_available+"). The stock will be set to 0. Continue?"))return;
+  try{await invAdj(it.id,d,$("iar").value,$("ian").value.trim());$("invdlg").close();invLoad()}catch(e){alert("Could not save: "+(e.message||e))}}}
+async function invHist(it){invDlg("History: "+it.name,'<div class="mu">Loading...</div>');
+ try{const {data,error}=await sb.from("inventory_moves").select("*").eq("item_id",it.id).order("at",{ascending:false}).limit(100);if(error)throw error;
+  const f=iso=>D(new Date(Date.parse(iso)+KSA).toISOString().slice(0,16).replace("T"," "));
+  $("invdb").innerHTML=`<div class="sec">${(data||[]).map(m=>`<div class="h"><b style="color:${m.delta>0?"var(--ok)":"var(--bad)"}">${m.delta>0?"+":""}${esc(m.delta)}</b> <small>${esc(f(m.at))} | ${esc(m.by||"")} | now ${esc(m.qty_after)}</small><div>${esc(m.reason||"")}${m.ref?" - "+esc(m.ref):""}</div></div>`).join("")||'<div class="mu">No movements recorded.</div>'}</div>`}
+ catch(e){$("invdb").innerHTML='<div class="sec">'+esc(e.message||e)+"</div>"}}
+function invClick(e){const b=e.target.closest("[data-inv]");if(!b||!isAdmin())return;const it=INV.items.find(x=>x.id===b.dataset.id);if(!it)return;const a=b.dataset.inv;
+ if(a==="adj")invAdjForm(it);else if(a==="edit")invForm(it);else if(a==="hist")invHist(it);
+ else if(a==="del"){if(!confirm("Delete \""+it.name+"\" and its history? This cannot be undone."))return;
+  sb.from("inventory").delete().eq("id",it.id).then(({error})=>{if(error)alert("Could not delete: "+error.message);else invLoad()})}}
+$("invx").onclick=()=>$("invdlg").close();
+/* ---- linking received parts to stock (runs for every editor) ---- */
+async function invAdj(id,delta,reason,ref){const {error}=await sb.rpc("inv_adjust",{p_id:id,p_delta:delta,p_reason:reason,p_ref:ref||"",p_by:me});if(error)throw error}
+async function invFindOrCreate(t,p){
+ const {data,error}=await sb.from("inventory").select("id,name").eq("truck_id",t.id);if(error)throw error;
+ const m=(data||[]).find(x=>invNorm(x.name)===invNorm(p.name));if(m)return m.id;
+ const {data:c,error:e2}=await sb.from("inventory").insert({name:String(p.name).trim(),truck_id:t.id,truck_label:t.fleetNo,qty_available:0}).select("id").single();if(e2)throw e2;return c.id}
+async function invOnStatus(t,p,ns){
+ let flow=p.inv?{...p.inv}:null,sfx="";const q=Math.max(0,parseInt(p.qty)||0),ref=t.fleetNo+" - "+p.name;
+ try{
+  if(ns==="arrived"&&!(flow&&flow.added)){if(q>0){const id=await invFindOrCreate(t,p);await invAdj(id,q,"Part arrived",ref);flow={added:true,used:false,item:id,qty:q};sfx="Inventory +"+q}}
+  else if(ns==="arrived"&&flow&&flow.added&&flow.used){await invAdj(flow.item,flow.qty,"Installation reversed",ref);flow.used=false;sfx="Inventory +"+flow.qty}
+  else if(ns==="installed"&&flow&&flow.added&&!flow.used){await invAdj(flow.item,-flow.qty,"Part installed",ref);flow.used=true;sfx="Inventory -"+flow.qty}
+  else if((ns==="needed"||ns==="ordered"||ns==="transit"||ns==="cancelled")&&flow&&flow.added&&!flow.used){await invAdj(flow.item,-flow.qty,"Arrival reversed",ref);sfx="Inventory -"+flow.qty+" (arrival reversed)";flow=null}
+ }catch(e){console.warn("inventory",e);return {flow:p.inv||null,sfx:"",fail:true}}
+ return {flow,sfx}}
 
 boot().catch(e=>loginMsg("Error: "+(e.message||e),false));
 </script></body></html>
