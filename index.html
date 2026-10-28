@@ -118,6 +118,7 @@ details.fold[open]>summary .sum{display:none}
 .ckr{display:flex;gap:8px;margin-bottom:8px;align-items:center}.ckr select{flex:0 0 150px}.ckr input{flex:1}
 @media (max-width:700px){.ckr{flex-wrap:wrap}.ckr select,.ckr input{flex:1 1 100%}}
 .ckt td.lkd{text-align:center;background:var(--gb);font-size:13px}
+.pwl{margin-top:6px;font-size:13px}.pwlink{border:1px dashed var(--pr);background:var(--card);padding:10px;margin-top:8px}.pwlink>b{display:block;color:var(--pr);margin-bottom:4px}.pwc{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px}.pwc input{flex:none;min-width:0;min-height:0;width:18px;height:18px}
 </style></head><body>
 <div id="login" style="position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px"><div class="sec" style="width:min(360px,100%);border-top:5px solid var(--pr)">
 <svg viewBox="0 0 250 34" style="height:28px;margin-bottom:6px"><text x="0" y="27" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="31" fill="#d5001c">ROSENBAUER</text></svg>
@@ -218,10 +219,11 @@ function render(){
 }
 function save(t,patch){const {id,...rest}=t;return col.doc(id).set({...rest,...patch}).catch(e=>alert("Save failed: "+(e.message||e.code)))}
 
-function partCard(p,w){
+function partCard(p,w,t){
+ const fw=t?pwl(t).filter(x=>(x.parts||[]).includes(p.id)&&x.status!=="Done"&&x.status!=="Cancelled"):[],fwLine=fw.length?`<div class="mu" style="font-size:13px">For pending work: ${fw.map(x=>esc(x.title)).join(", ")}</div>`:"";
  const trail=(p.log||[]).map(l=>`<div>${badge(l.s)} ${esc(l.by||"")} · ${esc(D(kat(l.at)))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
  return `<div class="part"><div class="hd"><div><b>${esc(p.name)}</b> <span class="mu">× ${esc(p.qty)}</span>${p.ref?` <span class="mu">· Ref ${esc(p.ref)}</span>`:""}</div>${badge(p.status)}${delBtnId("partsList",p.id)}</div>
- ${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
+ ${fwLine}${w?`<div class="row"><select data-ps="${esc(p.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===p.status?" selected":""}>${v[0]}</option>`).join("")}</select><input data-pr="${esc(p.id)}" placeholder="Order ref (PO / Magic)" value="${esc(p.ref||"")}"><input data-pn="${esc(p.id)}" placeholder="Note (ETA, supplier…)"><button data-act="pupd" data-pid="${esc(p.id)}">Update</button></div>`:""}
  <div class="trail">${trail}</div></div>`;
 }
 const F=[["fleetNo","Fleet No. *"],["order","List position (1 = first)","number"],["plate","Plate No."],["name","Vehicle type"],["make","Make"],["model","Model"],["year","Year"],["vin","VIN / Chassis No."],["engine","Engine No."],["commissioned","In service since","date"],["notes","Notes"]];
@@ -262,22 +264,30 @@ function reportHTML(t){
  <h4>Tires</h4>${tireTiles(t)}<div style="margin-top:6px">${tireHist(t)}</div>
  <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
  <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
- <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
+ <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}${(x.parts&&x.parts.length)?"<br><span class=\"mu\">Parts: "+esc(x.parts.map(i=>(plist(t).find(p=>p.id===i)||{}).name).filter(Boolean).join(", "))+"</span>":""}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
  <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(D(h.date))}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
 const PW_ST=["Open","In progress","Waiting for parts","Done","Cancelled"],PW_PR=["Low","Normal","High","Urgent"];
 const pwl=t=>t.pendingWorks||[];
 const pwOpen=t=>pwl(t).filter(x=>x.status!=="Done"&&x.status!=="Cancelled");
 const pwCls=x=>x.priority==="Urgent"?"off":x.priority==="High"?"pw":"pb";
 function pendingCell(t){const o=pwOpen(t);if(!o.length)return '<span class="b pn">None</span>';const u=o.filter(x=>x.priority==="Urgent").length;return `<span class="b ${u?"off":"pw"}">${o.length} open</span>${u?`<span class="b off">${u} urgent</span>`:""}`}
-function pwCard(x,wr){
+function pwCard(x,wr,t){
  const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(D(kat(l.at)))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
+ const WP="Waiting for parts",adm=!!(wr&&t&&isAdmin());
+ const lk=t?(x.parts||[]).map(i=>plist(t).find(p=>p.id===i)).filter(Boolean):[];
+ const ready=lk.length&&lk.every(p=>p.status==="arrived"||p.status==="installed");
+ const linkTxt=lk.length?`<div class="pwl"><span class="mu">Linked parts:</span> ${lk.map(p=>`${esc(p.name)} × ${esc(p.qty)} ${badge(p.status)}`).join(" ")}${ready&&x.status===WP?' <span class="b on">All parts arrived - the work can continue</span>':""}</div>`:"";
+ const act=adm?plist(t).filter(p=>["needed","ordered","transit","arrived"].includes(p.status)):[],sel=new Set(x.parts||[]);
+ const panel=adm?`<div class="pwlink" data-wl="${esc(x.id)}" style="display:${x.status===WP?"block":"none"}"><b>Link the spare part(s) this work is waiting for</b>${act.length?act.map(p=>`<label class="pwc"><input type="checkbox" data-wp="${esc(x.id)}" value="${esc(p.id)}"${sel.has(p.id)?" checked":""}> ${esc(p.name)} × ${esc(p.qty)} ${badge(p.status)}</label>`).join(""):'<div class="mu" style="margin:6px 0">There is no spare part on this truck to link. Create the order below first.</div>'}<div class="mu" style="margin-top:8px">${act.length?"Part not listed? Order it here:":"New spare part order:"}</div><div class="row" style="margin-top:4px"><input data-wnp="${esc(x.id)}" placeholder="Part name" style="flex:2"><input data-wnq="${esc(x.id)}" type="number" min="1" value="1" class="sm"><button data-act="wnew" data-wid="${esc(x.id)}">Create part request and link</button></div></div>`:"";
  return `<div class="part"><div class="hd"><b>${esc(x.title)}</b><span><span class="b ${pwCls(x)}">${esc(x.priority)}</span><span class="b pn">${esc(x.status)}</span>${delBtnId("pendingWorks",x.id)}</span></div>
  ${x.desc?`<div class="mu">${esc(x.desc)}</div>`:""}
+ ${linkTxt}
  ${wr?`<div class="row"><select data-ws="${esc(x.id)}">${PW_ST.map(v=>`<option${v===x.status?" selected":""}>${v}</option>`).join("")}</select><input data-wn="${esc(x.id)}" placeholder="Note / progress"><button data-act="wupd" data-wid="${esc(x.id)}">Update</button></div>`:""}
+ ${panel}
  <div class="trail">${trail}</div></div>`}
 function pendingSec(t,w){const op=pwOpen(t),cl=pwl(t).filter(x=>!op.includes(x));
- return `<div class="sec"><h3>Pending works${op.length?` (${op.length} open)`:""}</h3>${op.map(x=>pwCard(x,w)).join("")||'<div class="mu">No pending works.</div>'}
- ${cl.length?`<details><summary>Closed (${cl.length}) – done / cancelled</summary>${cl.map(x=>pwCard(x,w)).join("")}</details>`:""}
+ return `<div class="sec"><h3>Pending works${op.length?` (${op.length} open)`:""}</h3>${op.map(x=>pwCard(x,w,t)).join("")||'<div class="mu">No pending works.</div>'}
+ ${cl.length?`<details><summary>Closed (${cl.length}) – done / cancelled</summary>${cl.map(x=>pwCard(x,w,t)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="wt" placeholder="Pending work (e.g. replace hydraulic hose)" style="flex:2"><select id="wp">${PW_PR.map(p=>`<option${p==="Normal"?" selected":""}>${p}</option>`).join("")}</select><input id="wd" placeholder="Details (optional)" style="flex:2"><button class="p" data-act="wadd">Add pending work</button></div>`:""}</div>`}
 const nfx=(x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true});
 function orderedList(){return [...trucks].sort((x,y)=>((+x.order||1e9)-(+y.order||1e9))||nfx(x.fleetNo,y.fleetNo))}
@@ -408,8 +418,8 @@ function detail(id){
  ${w?`<div class="row"><select id="st"><option value="online">Online</option><option value="offline">Offline</option></select><input type="number" id="od" min="0" placeholder="New odometer (km)"><button class="p" data-act="sto">Update</button></div>`:""}
  <details style="margin-top:8px"><summary>Status history</summary>${statusHTML(t,true)}</details></div>
  <div class="sec"><h3>Spare parts</h3>
- ${op.map(p=>partCard(p,w)).join("")||'<div class="mu">No open part requests.</div>'}
- ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w)).join("")}</details>`:""}
+ ${op.map(p=>partCard(p,w,t)).join("")||'<div class="mu">No open part requests.</div>'}
+ ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w,t)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
  ${pendingSec(t,w)}${batterySec(t,w)}${tireSec(t,w)}
  ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div>${withSel()}</div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
@@ -437,7 +447,20 @@ $("dbody").addEventListener("click",e=>{
   save(t,{[k]:id!==undefined?arr.filter(x=>x.id!==id):arr.filter((_,j)=>j!==+i)})}
  else if(a==="deltruck"){if(!isAdmin())return;const x=prompt(`This permanently deletes truck ${t.fleetNo} and ALL its records.\nType the fleet number to confirm:`);if(x===null)return;if(x.trim().toLowerCase()!==String(t.fleetNo).trim().toLowerCase())return alert("Fleet number did not match. Nothing was deleted.");col.doc(t.id).delete().then(()=>{const ps=(t.history||[]).flatMap(h=>h.photos||[]);if(ps.length)sb.storage.from(PHB).remove(ps);trucks=trucks.filter(z=>z.id!==t.id);$("dlg").close();openId=null;render()}).catch(err=>alert("Delete failed: "+(err.message||err)))}
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
- else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,log:(st!==x.status||note)?[...(x.log||[]),{s:st,by:me,at:now(),note}]:x.log})})}
+ else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();
+  const w0=pwl(t).find(x=>x.id===id);if(!w0)return;let parts=w0.parts||[];
+  if(isAdmin()&&st==="Waiting for parts"){
+   const ch=[...document.querySelectorAll(`[data-wp="${id}"]:checked`)].map(i=>i.value);
+   if(!ch.length){const pn=document.querySelector(`[data-wl="${id}"]`);if(pn)pn.style.display="block";return alert("To mark this work as Waiting for parts, link at least one spare part.\n\nIf the part is not on the list, order it in the box below and it will be linked automatically.")}
+   parts=ch}
+  const chg=JSON.stringify(parts)!==JSON.stringify(w0.parts||[]);
+  save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,parts,log:(st!==x.status||note||chg)?[...(x.log||[]),{s:st,by:me,at:now(),note:note||(chg&&parts.length?"Linked: "+parts.map(i=>(plist(t).find(p=>p.id===i)||{}).name).filter(Boolean).join(", "):"")}]:x.log})})}
+ else if(a==="wnew"){if(!isAdmin())return;const id=e.target.dataset.wid,w0=pwl(t).find(x=>x.id===id);if(!w0)return;
+  const nm=document.querySelector(`[data-wnp="${id}"]`).value.trim(),q=Math.max(1,Math.floor(+document.querySelector(`[data-wnq="${id}"]`).value||1));
+  if(!nm)return alert("Enter the name of the part to order.");
+  const note=document.querySelector(`[data-wn="${id}"]`).value.trim(),pid="p"+Date.now().toString(36),ch=[...document.querySelectorAll(`[data-wp="${id}"]:checked`)].map(i=>i.value);
+  const np={id:pid,name:nm,qty:q,status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:"Requested for pending work: "+w0.title}]};
+  save(t,{partsList:[...plist(t),np],pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:"Waiting for parts",parts:[...new Set([...ch,pid])],log:[...(x.log||[]),{s:"Waiting for parts",by:me,at:now(),note:note||"New part requested: "+nm+" x "+q}]})})}
  else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v||!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
   if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
   else save(t,{...v,order:""})}
@@ -605,6 +628,7 @@ document.addEventListener("click",e=>{const b=e.target.closest(".dpk");if(!b)ret
 document.addEventListener("change",e=>{const n=e.target;if(n.classList&&n.classList.contains("dnat"))n.parentNode.querySelector("input[type=text]").value=D(n.value)});
 $("bell").onclick=()=>{renderBell();$("ntdlg").showModal();loadMeta().then(renderBell)};
 $("ntx").onclick=()=>$("ntdlg").close();
+$("dbody").addEventListener("change",e=>{const sl=e.target.closest&&e.target.closest("[data-ws]");if(!sl)return;const pn=document.querySelector('[data-wl="'+sl.dataset.ws+'"]');if(pn)pn.style.display=sl.value==="Waiting for parts"?"block":"none"});
 $("ntlist").addEventListener("click",e=>{
  const b=e.target.closest("[data-nact]");
  if(b){if(!isAdmin())return;const a=b.dataset.nact,k=b.dataset.key;
