@@ -782,9 +782,6 @@ async function ckPdf(){
   if(!d){miss.push(cfg.tab);
    try{const {data:prev}=await sb.from("daily_checks").select("day,data").eq("sheet",cfg.key).lt("day",CK.day).order("day",{ascending:false}).limit(1);d=prev&&prev.length?ckFit(prev[0].data,cfg,true):ckDefault(cfg)}catch(e){d=ckDefault(cfg)}}
   d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push({cfg,d})}
- if(miss.length&&!confirm("These sheets have not been opened or saved for this date:\n"+miss.join(", ")+"\n\nThey will be included in the PDF using the last saved check (or all OK if there is none). Continue?"))return;
- const dirty=DC_CFG.filter(s=>CK.c[ckKey(s.key)]&&CK.c[ckKey(s.key)].dirty).length;
- if(dirty&&!confirm("Some sheets have unsaved changes. They will be included in the PDF but are not saved yet. Continue?"))return;
  const st=$("ckState");if(st)st.textContent="Creating the PDF...";
  try{await ckLoadPdfLib()}catch(e){if(st)st.textContent="";return alert("Could not create the PDF: "+(e.message||e)+". Check your internet connection and try again.")}
  const p=CK.day.split("-"),name="PMIA CFR Daily Check Report _ "+p[2]+"-"+p[1]+"-"+p[0];
