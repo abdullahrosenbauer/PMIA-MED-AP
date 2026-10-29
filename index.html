@@ -559,7 +559,7 @@ async function reportDoc(el,title,css){const box=el.cloneNode(true);
 function printDoc(html,title){const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
  const w=f.contentWindow,d=w.document;d.open();d.write(html);d.close();
  Promise.all([...d.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>setTimeout(()=>{const old=document.title;if(title)document.title=title;w.focus();w.print();if(title)setTimeout(()=>{document.title=old},1500);setTimeout(()=>f.remove(),120000)},300))}
-async function saveDoc(filename,html){const d=await claude.use("downloads");if(!d)return alert("Download is not available.");try{await d.save({filename,data:html})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}}
+async function saveDoc(filename,html,type){const d=await claude.use("downloads");if(!d)return alert("Download is not available.");try{await d.save({filename,data:html,type})}catch(e){if(e&&e.code!=="cancelled")alert("Could not save: "+(e.message||e.code))}}
 $("rp").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;printDoc(await reportDoc($("rbody"),"Report "+esc(t.fleetNo),CSS_TRUCK))};
 $("rd").onclick=async()=>{const t=trucks.find(x=>x.id===openId);if(!t)return;saveDoc((t.fleetNo||"truck")+"-report.html",await reportDoc($("rbody"),"Report "+esc(t.fleetNo),CSS_TRUCK))};
 $("actp").onclick=async()=>printDoc(await reportDoc($("actbody"),"Activity report "+today(),CSS_ACT));
@@ -703,7 +703,7 @@ function ckRender(){
  t+=`</tbody></table></div>`;
  h+=t;
  h+=`<div class="sec" style="margin-top:12px"><h3>Observations and remarks</h3>${d.rem.map((r,k)=>`<div class="ckr"><select data-ck="rv" data-r="${k}" ${ro?"disabled":""}>${opts(cfg.veh,r.v)}</select><input data-ck="rt" data-r="${k}" value="${esc(r.t)}" placeholder="Comment / remark" ${ro?"disabled":""}>${ro?"":`<button data-ckact="rdel" data-r="${k}">Remove</button>`}</div>`).join("")||'<div class="mu">No remarks.</div>'}${ro?"":'<div class="row"><button data-ckact="radd">+ Add remark</button></div>'}</div>`;
- h+=`<div class="sec" style="margin-top:12px"><div class="row" style="margin-top:0;align-items:center"><span class="mu">Prepared by: <b>${esc(me)}</b></span>${ro?"":`<button class="p" data-ckact="save">Save</button>`}<button class="p" data-ckact="pdf">Print / PDF (all sheets)</button><span class="mu" id="ckState">${c.dirty?"Unsaved changes":""}</span></div></div>`;
+ h+=`<div class="sec" style="margin-top:12px"><div class="row" style="margin-top:0;align-items:center"><span class="mu">Prepared by: <b>${esc(me)}</b></span>${ro?"":`<button class="p" data-ckact="save">Save</button>`}<button class="p" data-ckact="pdf">Download PDF</button><span class="mu" id="ckState">${c.dirty?"Unsaved changes":""}</span></div></div>`;
  root.innerHTML=h}
 function ckMark(){const c=ckCur();if(c)c.dirty=true;const s=$("ckState");if(s)s.textContent="Unsaved changes";document.querySelectorAll(".ckst").forEach(b=>{if(b.dataset.sk===CK.sk&&!b.querySelector(".ckdot")){const q=b.querySelector(".ckok");if(q)q.remove();b.insertAdjacentHTML("beforeend",' <span class="ckdot">●</span>')}})}
 async function ckSaveOne(sk){const k=ckKey(sk),c=CK.c[k];if(!c)return;const cfg=DC_CFG.find(s=>s.key===sk);
@@ -734,17 +734,62 @@ function ckSheetHTML(day,cfg,d){
  const n=cfg.items.length+(cfg.status?3:0)+1,fs=n>=30?10.5:n>=24?11.5:n>=16?13:15;
  return `<section class="pg" style="font-size:${fs}px"><div class="hd"><img class="lg" src="${DC_LOGO}"><div class="tt"><b>PMIA CFR Fleet Daily Check Dashboard</b><br><span>${esc(cfg.title)}</span></div><div class="dt">Date: <b>${wd}, ${esc(D(day))}</b><br>Technician: <b>${esc(d.tech||"")}</b></div></div><div class="lgd">${legend}</div>${rem.length?"":'<div class="nor"><b>Observations / Remarks:</b> No remarks</div>'}<div class="row2"><div class="mw">${m}</div>${rb}</div></section>`}
 const CK_CSS="@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial,sans-serif;margin:0;color:#222}.pg{height:193mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}.pg:last-child{page-break-after:auto}.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #d5001c;padding-bottom:6px;margin-bottom:6px;flex:none}.lg{height:30px}.tt{text-align:center;font-size:17px;line-height:1.3}.tt span{font-size:14px;color:#d5001c;font-weight:bold}.dt{text-align:right;font-size:12px;line-height:1.6}.lgd{margin:2px 0 8px;font-size:10px;flex:none}.lg2{display:inline-block;padding:2px 8px;font-weight:bold;border-radius:2px;font-size:10px}.mu{color:#777}.nor{flex:none;margin:0 0 6px;font-size:11px;color:#444;border:1px solid #bbb;padding:3px 8px}.row2{flex:1;display:flex;gap:12px;min-height:0}.mw{flex:1;display:flex;min-width:0}table.m{width:100%;height:100%;border-collapse:collapse}.rb{flex:0 0 26%;border:1px solid #bbb;display:flex;flex-direction:column;overflow:hidden}.rb .rh{background:#2b2b2b;color:#fff;font-weight:bold;text-align:center;padding:5px;font-size:12px}.rb .ri{padding:6px 8px;border-bottom:1px solid #ddd;font-size:12px;line-height:1.35}.rb .ri b{display:block;color:#d5001c}td,th{border:1px solid #bbb;padding:1px 5px;line-height:1.15;vertical-align:middle}th{background:#2b2b2b;color:#fff;text-align:center}th.l,td.l{text-align:left}td.c{text-align:center;font-weight:bold}";
+const CK_PDF_URL="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+function ckLoadPdfLib(){return window.jspdf?Promise.resolve():new Promise((res,rej)=>{const s=document.createElement("script");s.src=CK_PDF_URL;s.onload=()=>window.jspdf?res():rej(new Error("The PDF library did not start"));s.onerror=()=>rej(new Error("The PDF library could not be loaded"));document.head.appendChild(s)})}
+function ckBuildPdf(day,sheets,title){
+ const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});doc.setProperties({title});
+ const PW=297,PH=210,M=8,CW=PW-2*M,hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+ const F=h=>doc.setFillColor(...hx(h)),T=h=>doc.setTextColor(...hx(h)),L=h=>doc.setDrawColor(...hx(h));
+ const wd=new Date(day+"T00:00:00Z").toLocaleDateString("en-GB",{weekday:"short",timeZone:"UTC"});
+ sheets.forEach((sh,si)=>{const cfg=sh.cfg,d=sh.d;if(si)doc.addPage();
+  doc.addImage(DC_LOGO,"PNG",M,M,38,7.3,"logo","FAST");
+  doc.setFont("helvetica","bold");doc.setFontSize(14);T("#222222");doc.text("PMIA CFR Fleet Daily Check Dashboard",PW/2,M+4,{align:"center"});
+  doc.setFontSize(11);T("#d5001c");doc.text(cfg.title,PW/2,M+10,{align:"center"});
+  const lv=(lab,val,y)=>{doc.setFontSize(9);doc.setFont("helvetica","normal");const w1=doc.getTextWidth(lab);doc.setFont("helvetica","bold");const w2=doc.getTextWidth(val),x=PW-M-w1-w2-1;T("#222222");doc.setFont("helvetica","normal");doc.text(lab,x,y);doc.setFont("helvetica","bold");doc.text(val,x+w1+1,y)};
+  lv("Date: ",wd+", "+D(day),M+4);lv("Technician: ",d.tech||"",M+9.5);
+  F("#d5001c");doc.rect(M,M+13,CW,0.8,"F");
+  let lx=M;const ly=M+19.5;doc.setFontSize(7);
+  DC_CODES.forEach(c=>{doc.setFont("helvetica","bold");const w=doc.getTextWidth(c)+4;F(DC_COL[c][0]);doc.roundedRect(lx,ly-3,w,4.2,0.6,0.6,"F");T(DC_COL[c][1]);doc.text(c,lx+2,ly);lx+=w+1.5});
+  doc.setFont("helvetica","normal");T("#777777");doc.text("OK - Good condition | OPR - Operational with remarks | REP - Replaced | DEF - Defective | N.P - Not present / not applicable",lx+2,ly);
+  let y0=ly+3;const rem=d.rem.filter(r=>r.t),hasRem=rem.length>0;
+  if(!hasRem){L("#bbbbbb");doc.setLineWidth(0.2);doc.rect(M,y0,CW,6,"S");doc.setFont("helvetica","bold");doc.setFontSize(8);T("#444444");doc.text("Observations / Remarks:",M+2,y0+3.2,{baseline:"middle"});const w=doc.getTextWidth("Observations / Remarks: ");doc.setFont("helvetica","normal");doc.text("No remarks",M+2+w,y0+3.2,{baseline:"middle"});y0+=8}
+  const H=PH-M-y0,rbW=hasRem?CW*0.26:0,TW=CW-(hasRem?rbW+3:0),nV=cfg.veh.length,itemW=Math.min(110,Math.max(70,TW*0.38)),cw=(TW-itemW)/nV;
+  const rows=1+(cfg.status?3:0)+cfg.items.length,rh=Math.min(H/rows,13);
+  let fs=rows>=30?7.9:rows>=24?8.6:rows>=16?9.8:11;
+  const lines=(t,w,s,b)=>{doc.setFontSize(s);doc.setFont("helvetica",b?"bold":"normal");return doc.splitTextToSize(String(t),w)};
+  while(fs>5.5&&cfg.items.some(it=>lines(it,itemW-3,fs).length*fs*0.405>rh-0.8))fs-=0.3;
+  const cell=(x,y,w,h,bg,fg,text,bold,left,fit)=>{F(bg||"#ffffff");L("#bbbbbb");doc.setLineWidth(0.2);doc.rect(x,y,w,h,"FD");
+   const ls=Array.isArray(text)?text:[String(text)];doc.setFont("helvetica",bold?"bold":"normal");let fz=fs;if(fit&&ls.length===1){doc.setFontSize(fz);while(fz>5&&doc.getTextWidth(ls[0])>w-2){fz-=0.3;doc.setFontSize(fz)}}doc.setFontSize(fz);T(fg||"#222222");
+   const lh=fz*0.405,sy=y+h/2-((ls.length-1)*lh)/2;ls.forEach((l,i)=>doc.text(l,left?x+1.5:x+w/2,sy+i*lh,{align:left?"left":"center",baseline:"middle"}))};
+  let y=y0;
+  cell(M,y,itemW,rh,"#2b2b2b","#ffffff","Check list items",true,true);cfg.veh.forEach((v,j)=>cell(M+itemW+j*cw,y,cw,rh,"#2b2b2b","#ffffff",[String(v)],true,false,true));y+=rh;
+  if(cfg.status){
+   cell(M,y,itemW,rh,"#ffffff","#222222","Status",true,true);cfg.veh.forEach((_,j)=>{const s=d.veh[j].st,ok=s==="Operational";cell(M+itemW+j*cw,y,cw,rh,ok?"#ffffff":"#fde8ea",ok?"#222222":"#d5001c",[String(s)],true,false,true)});y+=rh;
+   cell(M,y,itemW,rh,"#ffffff","#222222","Odometer in Km",true,true);cfg.veh.forEach((_,j)=>cell(M+itemW+j*cw,y,cw,rh,"#ffffff","#222222",String(d.veh[j].odo||""),true,false,true));y+=rh;
+   cell(M,y,itemW,rh,"#ffffff","#222222","Fuel level",true,true);cfg.veh.forEach((_,j)=>cell(M+itemW+j*cw,y,cw,rh,"#ffffff","#222222",String(d.veh[j].fuel||""),true,false,true));y+=rh}
+  cfg.items.forEach((it,i)=>{cell(M,y,itemW,rh,"#ffffff","#222222",lines(it,itemW-3,fs),false,true);
+   cfg.veh.forEach((_,j)=>{const v=d.it[i][j],c=DC_COL[v]||DC_COL["N.P"];cell(M+itemW+j*cw,y,cw,rh,c[0],c[1],v,true)});y+=rh});
+  if(hasRem){const bx=M+TW+3;F("#ffffff");L("#bbbbbb");doc.setLineWidth(0.2);doc.rect(bx,y0,rbW,H,"FD");
+   F("#2b2b2b");doc.rect(bx,y0,rbW,6,"F");T("#ffffff");doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("Observations / Remarks",bx+rbW/2,y0+3.2,{align:"center",baseline:"middle"});
+   let ry=y0+6;rem.forEach(r=>{const ls=lines(r.t,rbW-5,8.5),h2=5+ls.length*3.7;if(ry+h2>y0+H)return;
+    doc.setFontSize(8.5);doc.setFont("helvetica","bold");T("#d5001c");doc.text(String(r.v),bx+2.5,ry+3.5);
+    doc.setFont("helvetica","normal");T("#222222");ls.forEach((l,i)=>doc.text(l,bx+2.5,ry+7.4+i*3.7));ry+=h2;L("#dddddd");doc.setLineWidth(0.15);doc.line(bx,ry-0.4,bx+rbW,ry-0.4)})}
+ });
+ return doc}
 async function ckPdf(){
  const out=[],miss=[];
  for(const cfg of DC_CFG){const k=ckKey(cfg.key);let d=CK.c[k]&&CK.c[k].data;
   if(!d){try{const {data:cur}=await sb.from("daily_checks").select("data").eq("id",k).maybeSingle();if(cur&&cur.data)d=ckFit(cur.data,cfg,false)}catch(e){}}
-  if(d){d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push(ckSheetHTML(CK.day,cfg,d))}else miss.push(cfg.tab)}
+  if(d){d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push({cfg,d})}else miss.push(cfg.tab)}
  if(!out.length)return alert("Nothing is filled in for this date yet.");
  if(miss.length&&!confirm("These sheets are not filled in for this date and will be left out:\n"+miss.join(", ")+"\n\nContinue?"))return;
  const dirty=DC_CFG.filter(s=>CK.c[ckKey(s.key)]&&CK.c[ckKey(s.key)].dirty).length;
  if(dirty&&!confirm("Some sheets have unsaved changes. They will be included in the PDF but are not saved yet. Continue?"))return;
- const p=CK.day.split("-"),title="PMIA CFR Daily Check Report _ "+p[2]+"/"+p[1]+"/"+p[0];
- printDoc(`<!DOCTYPE html><meta charset="utf-8"><title>${title}</title><style>${CK_CSS}</style>${out.join("")}`,title)}
+ const st=$("ckState");if(st)st.textContent="Creating the PDF...";
+ try{await ckLoadPdfLib()}catch(e){if(st)st.textContent="";return alert("Could not create the PDF: "+(e.message||e)+". Check your internet connection and try again.")}
+ const p=CK.day.split("-"),name="PMIA CFR Daily Check Report _ "+p[2]+"-"+p[1]+"-"+p[0];
+ try{const doc=ckBuildPdf(CK.day,out,name);await saveDoc(name+".pdf",doc.output("blob"),"application/pdf");if(st)st.textContent="PDF downloaded"}
+ catch(e){if(st)st.textContent="";alert("Could not create the PDF: "+(e.message||e))}}
 $("ckBody").addEventListener("change",e=>{const t=e.target,a=t.dataset.ck;if(!a)return;const c=ckCur();if(!c||!canWrite)return;const d=c.data,j=+t.dataset.j,i=+t.dataset.i,r=+t.dataset.r;
  if(a==="st")d.veh[j].st=t.value;else if(a==="fuel")d.veh[j].fuel=t.value;
  else if(a==="it"){d.it[i][j]=t.value;t.className="cd c-"+t.value.replace(".","")}
