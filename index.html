@@ -690,7 +690,6 @@ function ckRender(){
  if(!c){root.innerHTML=h+'<div class="empty">Loading...</div>';return}
  const d=c.data,live=cfg.status&&CK.day===today(),lk=cfg.status?ckLinkMap(cfg):[];
  if(live)ckSync(cfg,d);
- if(c.carried)h+=`<div class="sec" style="background:var(--wab);color:var(--wa)">Started from the check of <b>${esc(D(c.carried))}</b>: remarks and items that were not OK are carried forward. Update what changed, then Save.</div>`;
  if(cfg.status){const un=live?cfg.veh.filter((_,j)=>!lk[j]):[];
   h+=live?`<div class="sec mu" style="font-size:13px">Status and odometer come from the main Fleet page automatically.${un.length?` <b>Not linked to a dashboard truck (enter manually):</b> ${esc(un.join(", "))}.`:""}</div>`:`<div class="sec mu" style="font-size:13px">Status and odometer link to the Fleet page only for today's date. For other dates they are entered manually.</div>`}
  h+=`<div class="sec"><h3 style="margin:0">${esc(cfg.title)}</h3></div>`;
@@ -780,9 +779,10 @@ async function ckPdf(){
  const out=[],miss=[];
  for(const cfg of DC_CFG){const k=ckKey(cfg.key);let d=CK.c[k]&&CK.c[k].data;
   if(!d){try{const {data:cur}=await sb.from("daily_checks").select("data").eq("id",k).maybeSingle();if(cur&&cur.data)d=ckFit(cur.data,cfg,false)}catch(e){}}
-  if(d){d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push({cfg,d})}else miss.push(cfg.tab)}
- if(!out.length)return alert("Nothing is filled in for this date yet.");
- if(miss.length&&!confirm("These sheets are not filled in for this date and will be left out:\n"+miss.join(", ")+"\n\nContinue?"))return;
+  if(!d){miss.push(cfg.tab);
+   try{const {data:prev}=await sb.from("daily_checks").select("day,data").eq("sheet",cfg.key).lt("day",CK.day).order("day",{ascending:false}).limit(1);d=prev&&prev.length?ckFit(prev[0].data,cfg,true):ckDefault(cfg)}catch(e){d=ckDefault(cfg)}}
+  d=JSON.parse(JSON.stringify(d));ckSync(cfg,d);d.tech=me||"";out.push({cfg,d})}
+ if(miss.length&&!confirm("These sheets have not been opened or saved for this date:\n"+miss.join(", ")+"\n\nThey will be included in the PDF using the last saved check (or all OK if there is none). Continue?"))return;
  const dirty=DC_CFG.filter(s=>CK.c[ckKey(s.key)]&&CK.c[ckKey(s.key)].dirty).length;
  if(dirty&&!confirm("Some sheets have unsaved changes. They will be included in the PDF but are not saved yet. Continue?"))return;
  const st=$("ckState");if(st)st.textContent="Creating the PDF...";
