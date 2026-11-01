@@ -273,7 +273,7 @@ const pwCls=x=>x.priority==="Urgent"?"off":x.priority==="High"?"pw":"pb";
 function pendingCell(t){const o=pwOpen(t);if(!o.length)return '<span class="b pn">None</span>';const u=o.filter(x=>x.priority==="Urgent").length;return `<span class="b ${u?"off":"pw"}">${o.length} open</span>${u?`<span class="b off">${u} urgent</span>`:""}`}
 function pwCard(x,wr,t){
  const trail=(x.log||[]).map(l=>`<div><span class="b pn">${esc(l.s)}</span> ${esc(l.by||"")} · ${esc(D(kat(l.at)))}${l.note?` — ${esc(l.note)}`:""}</div>`).join("");
- const WP="Waiting for parts",adm=!!(wr&&t&&isAdmin());
+ const WP="Waiting for parts",adm=!!(wr&&t&&canWrite);
  const lk=t?(x.parts||[]).map(i=>plist(t).find(p=>p.id===i)).filter(Boolean):[];
  const ready=lk.length&&lk.every(p=>p.status==="arrived"||p.status==="installed");
  const linkTxt=lk.length?`<div class="pwl"><span class="mu">Linked parts:</span> ${lk.map(p=>`${esc(p.name)} × ${esc(p.qty)} ${badge(p.status)}`).join(" ")}${ready&&x.status===WP?' <span class="b on">All parts arrived - the work can continue</span>':""}</div>`:"";
@@ -449,13 +449,13 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="wadd"){const n=$("wt").value.trim();if(!n)return alert("Describe the pending work.");save(t,{pendingWorks:[...pwl(t),{id:"w"+Date.now().toString(36),title:n,desc:$("wd").value.trim(),priority:$("wp").value,status:"Open",log:[{s:"Open",by:me,at:now(),note:""}]}]})}
  else if(a==="wupd"){const id=e.target.dataset.wid,st=document.querySelector(`[data-ws="${id}"]`).value,note=document.querySelector(`[data-wn="${id}"]`).value.trim();
   const w0=pwl(t).find(x=>x.id===id);if(!w0)return;let parts=w0.parts||[];
-  if(isAdmin()&&st==="Waiting for parts"){
+  if(canWrite&&st==="Waiting for parts"){
    const ch=[...document.querySelectorAll(`[data-wp="${id}"]:checked`)].map(i=>i.value);
    if(!ch.length){const pn=document.querySelector(`[data-wl="${id}"]`);if(pn)pn.style.display="block";return alert("To mark this work as Waiting for parts, link at least one spare part.\n\nIf the part is not on the list, order it in the box below and it will be linked automatically.")}
    parts=ch}
   const chg=JSON.stringify(parts)!==JSON.stringify(w0.parts||[]);
   save(t,{pendingWorks:pwl(t).map(x=>x.id!==id?x:{...x,status:st,parts,log:(st!==x.status||note||chg)?[...(x.log||[]),{s:st,by:me,at:now(),note:note||(chg&&parts.length?"Linked: "+parts.map(i=>(plist(t).find(p=>p.id===i)||{}).name).filter(Boolean).join(", "):"")}]:x.log})})}
- else if(a==="wnew"){if(!isAdmin())return;const id=e.target.dataset.wid,w0=pwl(t).find(x=>x.id===id);if(!w0)return;
+ else if(a==="wnew"){if(!canWrite)return;const id=e.target.dataset.wid,w0=pwl(t).find(x=>x.id===id);if(!w0)return;
   const nm=document.querySelector(`[data-wnp="${id}"]`).value.trim(),q=Math.max(1,Math.floor(+document.querySelector(`[data-wnq="${id}"]`).value||1));
   if(!nm)return alert("Enter the name of the part to order.");
   const note=document.querySelector(`[data-wn="${id}"]`).value.trim(),pid="p"+Date.now().toString(36),ch=[...document.querySelectorAll(`[data-wp="${id}"]:checked`)].map(i=>i.value);
