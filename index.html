@@ -266,7 +266,7 @@ function reportHTML(t){
  <h4>Battery</h4>${battLine(t)}<div style="margin-top:6px">${battHist(t)}</div>
  <h4>Spare parts</h4>${tb(["Part","Qty","Status","Ref","History"],parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.qty)}</td><td>${ST[p.status][0]}</td><td>${esc(p.ref)}</td><td>${(p.log||[]).map(l=>`${ST[l.s][0]}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
  <h4>Pending works</h4>${tb(["Work","Priority","Status","Details","History"],pwl(t).map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.priority)}</td><td>${esc(x.status)}</td><td>${esc(x.desc)}${(x.parts&&x.parts.length)?"<br><span class=\"mu\">Parts: "+esc(x.parts.map(i=>(plist(t).find(p=>p.id===i)||{}).name).filter(Boolean).join(", "))+"</span>":""}</td><td>${(x.log||[]).map(l=>`${esc(l.s)}: ${esc(l.by)} ${esc(D(kat(l.at)))}${l.note?" ("+esc(l.note)+")":""}`).join("<br>")}</td></tr>`))}
- <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(D(h.date))}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
+ <h4>Maintenance history</h4>${tb(["Date","Type","Notes","By"],hist.map(h=>`<tr><td>${esc(D(h.date))}</td><td>${esc(h.type)}</td><td>${esc(h.note)}${h.parts&&h.parts.length?`<div><b>Parts used:</b> ${h.parts.map(p=>esc(p.name)+" × "+esc(p.qty)).join(", ")}</div>`:""}${phHTML(h,true)}</td><td>${esc(h.by)}</td></tr>`))}</div>`}
 const PW_ST=["Open","In progress","Waiting for parts","Done","Cancelled"],PW_PR=["Low","Normal","High","Urgent"];
 const pwl=t=>t.pendingWorks||[];
 const pwOpen=t=>pwl(t).filter(x=>x.status!=="Done"&&x.status!=="Cancelled");
@@ -319,7 +319,7 @@ const phHTML=(h,big)=>(h.photos&&h.photos.length)?`<div class="th">${h.photos.ma
 function collectActivity(from,to){
  const A=[],inr=d=>d&&d>=from&&d<=to,od=()=>"";
  trucks.forEach(t=>{
-  (t.history||[]).forEach(h=>{if(inr(h.date))A.push({d:h.date,tm:"",t:t.fleetNo,c:"Maintenance",a:h.type,x:(h.note||"")+od(h)+(h.photos&&h.photos.length?" · "+h.photos.length+" photo(s)":""),by:h.by})});
+  (t.history||[]).forEach(h=>{if(inr(h.date))A.push({d:h.date,tm:"",t:t.fleetNo,c:"Maintenance",a:h.type,x:(h.note||"")+(h.parts&&h.parts.length?" · Parts: "+h.parts.map(p=>p.name+" x"+p.qty).join(", "):"")+od(h)+(h.photos&&h.photos.length?" · "+h.photos.length+" photo(s)":""),by:h.by})});
   (t.batteryLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Battery",a:"Battery replaced",x:(e.note||"")+od(e),by:e.by})});
   (t.tireLog||[]).forEach(e=>{if(inr(e.date))A.push({d:e.date,tm:"",t:t.fleetNo,c:"Tires",a:"Tires replaced – "+scopeTxt(e),x:(e.note||"")+od(e),by:e.by})});
   plist(t).forEach(p=>(p.log||[]).forEach((l,i)=>{const d=kat(l.at).slice(0,10);if(inr(d))A.push({d,tm:kat(l.at).slice(11),t:t.fleetNo,c:"Spare part",a:(i===0?"Part requested":"Part status: "+ST[l.s][0])+" – "+p.name+" × "+p.qty,x:[l.note,i>0&&p.ref?"Ref: "+p.ref:""].filter(Boolean).join(" · "),by:l.by})}));
@@ -411,7 +411,7 @@ function detail(id){
  const t=trucks.find(x=>x.id===id);if(!t)return;if(openId!==id||!$("dlg").open)openSecs.clear();openId=id;
  $("dt").textContent=`${t.fleetNo} ${t.plate||""}`;
  const w=canWrite;
- const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(D(h.date))} · ${esc(h.by||"")}${h.with&&h.with.length?" · with "+esc(h.with.join(", ")):""}</small><div>${esc(h.note)}</div>${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
+ const hist=(t.history||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="h"><b>${esc(h.type)}</b> <small>${esc(D(h.date))} · ${esc(h.by||"")}${h.with&&h.with.length?" · with "+esc(h.with.join(", ")):""}</small><div>${esc(h.note)}</div>${h.parts&&h.parts.length?`<div class="mu">Parts used: ${h.parts.map(p=>esc(p.name)+" × "+esc(p.qty)).join(", ")}</div>`:""}${phHTML(h)}${delBtn("history",h._i)}</div>`).join("")||'<div class="mu">No records yet.</div>';
  const comp=(k,l)=>{const c=t[k]||{};return `<div class="sec"><h3>${l}</h3><div class="mu">${c.date?esc(D(c.date))+" — "+esc(c.note||""):"No record"}</div>${w?`<div class="row"><input type="date" id="${k}d" value="${today()}"><input id="${k}n" placeholder="Notes"><button data-act="${k}">Log</button></div>`:""}</div>`};
  const parts=plist(t),op=parts.filter(p=>OPEN.includes(p.status)),cl=parts.filter(p=>!OPEN.includes(p.status));
  $("dbody").innerHTML=`
@@ -423,10 +423,10 @@ function detail(id){
  ${cl.length?`<details><summary>Closed (${cl.length}) – installed / cancelled</summary>${cl.map(p=>partCard(p,w,t)).join("")}</details>`:""}
  ${w?`<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><input id="pnm" placeholder="New part (name / part no.)" style="flex:2"><input id="pq" class="sm" type="number" min="1" value="1"><input id="pno" placeholder="Note (why needed)" style="flex:2"><button class="p" data-act="padd">Request part</button></div>`:""}</div>
  ${pendingSec(t,w)}${batterySec(t,w)}${tireSec(t,w)}
- ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div>${withSel()}</div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
+ ${w?`<div class="sec"><h3>Add maintenance record</h3><div class="row">${dateField("hd",today())}<select id="ht"><option>PM</option><option>CM</option><option>Breakdown</option><option>Inspection</option></select></div><div id="hparts" class="pwlink" style="display:none"></div><div class="row"><input id="hn" placeholder="Work done / technician notes"></div><div>${withSel()}</div><div class="row"><input type="file" id="hp" accept="image/*" multiple style="flex:2"><span class="mu" style="font-size:12px">Photos are shrunk automatically (max 8)</span></div><div class="row"><button class="p" data-act="hist">Save record</button><span class="mu" id="hmsg"></span></div></div>`:""}
  <div class="sec"><h3>Maintenance history</h3>${hist}</div>
  ${isAdmin()?`<div class="sec" style="border-color:#d5001c"><h3>Delete truck</h3><div class="mu">Permanently removes this truck and all its records.</div><div class="row"><button data-act="deltruck" style="color:#d5001c;border-color:#d5001c">Delete this truck</button></div></div>`:""}`;
- if(w)$("st").value=t.status;foldify(t);loadPhotos($("dbody"));
+ if(w)$("st").value=t.status;foldify(t);loadPhotos($("dbody"));if(w)mrInit(t);
  if(!$("dlg").open)$("dlg").showModal();
 }
 $("dbody").addEventListener("click",e=>{
@@ -465,8 +465,15 @@ $("dbody").addEventListener("click",e=>{
  else if(a==="saveinfo"){if(!isAdmin())return;const v=readInfo("e");if(!v||!v.fleetNo)return alert("Fleet number is required.");editInfo=false;openSecs.add("Vehicle information");const pos=parseInt(v.order);
   if(pos>0){const rest=orderedList().filter(z=>z.id!==t.id);rest.splice(Math.min(pos,rest.length+1)-1,0,t);rest.forEach((z,i)=>{if(z.id===t.id)save(t,{...v,order:i+1});else if(+z.order!==i+1)save(z,{order:i+1})})}
   else save(t,{...v,order:""})}
- else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");if(!dv("hd"))return alert(DATE_MSG);const fl=[...$("hp").files],wl=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);if(fl.length>8)return alert("Maximum 8 photos per record.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
-  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:$("ht").value,note:n,by:me,...(wl.length?{with:wl}:{}),photos:ph}]})}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
+ else if(a==="hist"){const n=$("hn").value.trim();if(!n)return alert("Add a note.");if(!dv("hd"))return alert(DATE_MSG);const fl=[...$("hp").files],wl=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);if(fl.length>8)return alert("Maximum 8 photos per record.");const typ=$("ht").value,used=["PM","CM"].includes(typ)?[...document.querySelectorAll("#hparts input[data-mr]:checked")].map(c=>{const it=(MR.items||[]).find(x=>x.id===c.dataset.mr),qi=document.querySelector('input[data-mq="'+c.dataset.mr+'"]');return {it,q:parseInt(qi&&qi.value)||0}}).filter(x=>x.it):[];if(used.some(x=>x.q<1))return alert("Type the quantity used for each ticked part.");if(used.some(x=>x.q>x.it.qty_available))return alert("A quantity is higher than the stock available.");const btn=e.target;btn.disabled=true;$("hmsg").textContent=fl.length?"Uploading photos…":"";
+  (async()=>{try{const ph=fl.length?await uploadPhotos(t.id,fl):[];
+   const pu=used.map(x=>({id:x.it.id,name:x.it.name,qty:x.q,src:x.it.truck_id?"truck":"general"}));
+   if(pu.length){const {data,error}=await sb.from("inventory").select("id,qty_available").in("id",pu.map(x=>x.id));if(error)throw error;const cur={};(data||[]).forEach(r=>cur[r.id]=r.qty_available);const bad=pu.find(x=>(cur[x.id]||0)<x.qty);if(bad)throw new Error("Not enough stock for "+bad.name+" (available now: "+(cur[bad.id]||0)+"). Close and reopen the truck, then try again.")}
+   let pl=plist(t),touched=false;
+   pu.filter(x=>x.src==="truck").forEach(x=>{const k=invNorm(x.name),pp=pl.find(y=>y.status==="arrived"&&invNorm(y.name)===k&&y.inv&&y.inv.added&&!y.inv.used&&y.inv.item===x.id&&(parseInt(y.qty)||0)<=x.qty);if(pp){pl=pl.map(y=>y===pp?{...y,status:"installed",inv:{...y.inv,used:true},log:[...(y.log||[]),{s:"installed",by:me,at:now(),note:"Installed - maintenance record"}]}:y);touched=true}});
+   await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:typ,note:n,by:me,...(wl.length?{with:wl}:{}),...(pu.length?{parts:pu}:{}),photos:ph}],...(touched?{partsList:pl}:{})});
+   const fails=[];for(const x of pu){try{await invAdj(x.id,-x.q,"Used in maintenance ("+typ+")",t.fleetNo+" - "+n.slice(0,40))}catch(er){console.warn(er);fails.push(x.name)}}
+   if(fails.length)alert("The record was saved, but the stock could not be reduced for: "+fails.join(", ")+".\nPlease ask an admin to adjust the stock in Inventory.")}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
  else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
   const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
   save(t,{partsList:[...plist(t),p]})}
@@ -620,7 +627,7 @@ $("rsGo").onclick=async()=>{if(!isAdmin())return;const f=$("rsFile").files[0];if
    if(!e3)up++;else if(/exist|duplicate/i.test(e3.message||""))sk++;else fail++}
   msg.textContent="Done. Trucks added: "+added+" (already there: "+skipped+"). Photos added: "+up+" (already there: "+sk+")"+(fail?", failed: "+fail:"")+".";
  }catch(e){msg.textContent="Restore failed: "+(e.message||e)}finally{btn.disabled=false}};
-document.addEventListener("change",e=>{const t=e.target;if(t.closest&&t.closest("#hwith")){const v=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);t.closest("details").querySelector("summary").textContent=v.length?"Worked with: "+v.join(", "):"Worked with (optional)"}});
+document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.mr){const q=document.querySelector('input[data-mq="'+t.dataset.mr+'"]');if(q)q.disabled=!t.checked}if(t.id==="ht")mrShow();if(t.closest&&t.closest("#hwith")){const v=[...document.querySelectorAll("#hwith input:checked")].map(x=>x.value);t.closest("details").querySelector("summary").textContent=v.length?"Worked with: "+v.join(", "):"Worked with (optional)"}});
 $("arfW").outerHTML=dateField("arf","");$("artW").outerHTML=dateField("art","");
 document.addEventListener("input",e=>{const el=e.target;if(!(el.matches&&el.matches(".df input[type=text]")))return;
  const m=el.value.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);if(m){el.value=m[3]+"/"+m[2].padStart(2,"0")+"/"+m[1].padStart(2,"0");return}
@@ -838,6 +845,22 @@ function invDetail(id){if(!isAdmin())return;const it=(INV.disp||[]).find(x=>x.id
   if(a==="adj")invAdjForm(it);else if(a==="edit")invForm(it);else if(a==="hist")invHist(it);
   else if(a==="del"){if(!confirm("Delete \""+it.name+"\" and its history? This cannot be undone."))return;
    sb.from("inventory").delete().eq("id",it.id).then(({error})=>{if(error)alert("Could not delete: "+error.message);else{$("invdlg").close();invLoad()}})}}}
+let MR={tid:null,items:null,err:"",tok:0};
+async function mrInit(t){if(!$("ht")||!$("hparts"))return;const my=MR.tok+1;MR={tid:t.id,items:null,err:"",tok:my};mrShow();
+ try{const {data,error}=await sb.from("inventory").select("*").gt("qty_available",0).order("name");if(error)throw error;MR.items=(data||[]).filter(i=>!i.truck_id||i.truck_id===t.id)}catch(e){if(MR.tok!==my)return;MR.err=e.message||String(e);MR.items=[]}
+ if(MR.tok===my)mrShow()}
+function mrShow(){const box=$("hparts"),ht=$("ht");if(!box||!ht)return;
+ if(!["PM","CM"].includes(ht.value)){box.style.display="none";return}
+ box.style.display="block";const keep={};
+ box.querySelectorAll("input[data-mr]:checked").forEach(c=>{const q=box.querySelector('input[data-mq="'+c.dataset.mr+'"]');keep[c.dataset.mr]=q?q.value:1});
+ if(MR.items===null){box.innerHTML='<b>Did you use any spare parts?</b><div class="mu">Loading stock...</div>';return}
+ const mk=it=>{const k=keep[it.id],on=k!==undefined;return `<label class="pwc"><input type="checkbox" data-mr="${esc(it.id)}"${on?" checked":""}><span style="flex:1">${esc(it.name)}${it.part_no?` <span class="mu">${esc(it.part_no)}</span>`:""} <span class="mu">(${esc(it.qty_available)} available)</span></span><input type="number" class="sm" min="1" max="${esc(it.qty_available)}" value="${on?esc(k):1}" data-mq="${esc(it.id)}"${on?"":" disabled"} title="Quantity used"></label>`};
+ const own=MR.items.filter(i=>i.truck_id),gen=MR.items.filter(i=>!i.truck_id);
+ box.innerHTML='<b>Did you use any spare parts?</b>'+(MR.err?'<div class="mu" style="color:var(--bad)">Could not load the stock: '+esc(MR.err)+'</div>':"")
+  +(own.length?'<div class="mu" style="margin-top:6px">This truck</div>'+own.map(mk).join(""):"")
+  +(gen.length?'<div class="mu" style="margin-top:6px">General stock</div>'+gen.map(mk).join(""):"")
+  +(!own.length&&!gen.length&&!MR.err?'<div class="mu" style="margin:6px 0">No spare part in stock for this truck.</div>':"")
+  +'<div class="mu" style="margin-top:6px">Tick the part used and type the quantity. Leave it empty if you used none.</div>'}
 function invIncoming(){const m={};
  trucks.forEach(t=>plist(t).forEach(p=>{if(!["needed","ordered","transit"].includes(p.status))return;const k=t.id+"|"+invNorm(p.name),o=m[k]||(m[k]={t,name:p.name,needed:0,ordered:0,transit:0,used:false});o[p.status]+=Math.max(0,parseInt(p.qty)||0)}));return m}
 function invIncTxt(o){if(!o)return'<span class="mu">-</span>';const a=[];if(o.needed)a.push("Needed "+o.needed);if(o.ordered)a.push("Ordered "+o.ordered);if(o.transit)a.push("In transit "+o.transit);return a.length?a.map(x=>'<span class="b pn">'+x+"</span>").join(" "):'<span class="mu">-</span>'}
