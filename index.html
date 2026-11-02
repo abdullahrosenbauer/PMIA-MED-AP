@@ -472,7 +472,7 @@ $("dbody").addEventListener("click",e=>{
    let pl=plist(t),touched=false;
    pu.filter(x=>x.src==="truck").forEach(x=>{const k=invNorm(x.name),pp=pl.find(y=>y.status==="arrived"&&invNorm(y.name)===k&&y.inv&&y.inv.added&&!y.inv.used&&y.inv.item===x.id&&(parseInt(y.qty)||0)<=x.qty);if(pp){pl=pl.map(y=>y===pp?{...y,status:"installed",inv:{...y.inv,used:true},log:[...(y.log||[]),{s:"installed",by:me,at:now(),note:"Installed - maintenance record"}]}:y);touched=true}});
    await save(t,{history:[...(t.history||[]),{date:dv("hd"),type:typ,note:n,by:me,...(wl.length?{with:wl}:{}),...(pu.length?{parts:pu}:{}),photos:ph}],...(touched?{partsList:pl}:{})});
-   const fails=[];for(const x of pu){try{await invAdj(x.id,-x.q,"Used in maintenance ("+typ+")",t.fleetNo+" - "+n.slice(0,40))}catch(er){console.warn(er);fails.push(x.name)}}
+   const fails=[];for(const x of pu){try{await invAdj(x.id,-x.qty,"Used in maintenance ("+typ+")",t.fleetNo+" - "+n.slice(0,40))}catch(er){console.warn(er);fails.push(x.name+" ("+(er&&er.message?er.message:er)+")")}}
    if(fails.length)alert("The record was saved, but the stock could not be reduced for: "+fails.join(", ")+".\nPlease ask an admin to adjust the stock in Inventory.")}catch(err){alert("Could not save: "+(err.message||err));btn.disabled=false;$("hmsg").textContent=""}})()}
  else if(a==="padd"){const n=$("pnm").value.trim();if(!n)return alert("Enter the part name.");
   const p={id:"p"+Date.now().toString(36),name:n,qty:Math.max(1,+$("pq").value||1),status:"needed",ref:"",log:[{s:"needed",by:me,at:now(),note:$("pno").value.trim()}]};
