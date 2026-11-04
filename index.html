@@ -822,6 +822,7 @@ function invBuild(){if(INV.built)return;INV.built=true;INV.flt="all";
  $("invcards").addEventListener("click",e=>{const b=e.target.closest("[data-f]");if(!b)return;INV.flt=b.dataset.f;invRows()});
  $("invtb").addEventListener("click",e=>{const tr=e.target.closest("tr[data-iid]");if(tr)invDetail(tr.dataset.iid)});
  $("invsync").addEventListener("click",e=>{if(e.target.id==="invsyncgo")invSync()})}
+function invRank(it){if((+it.qty_available||0)>0)return 0;const o=it.inc;if(o){if(o.transit)return 1;if(o.ordered)return 2;if(o.needed)return 3}return 4}
 function invStat(it){if(it.virtual)return["order","","pb"];const q=+it.qty_available||0,m=+it.min_qty||0;
  if(q<=0)return["out","Out of stock","off"];if(m>0&&q<=m)return["low","Low","pw"];return["ok","In stock","on"]}
 function invRows(){if(!INV.built)return;
@@ -835,7 +836,7 @@ function invRows(){if(!INV.built)return;
  $("invcards").innerHTML=cd.map(c=>`<button class="kpi${fl===c[0]?" sel":""}" data-f="${c[0]}"><b>${c[2]}</b><small>${c[1]}</small></button>`).join("");
  const q=invNorm($("invq").value),f=sel.value,rk={out:0,low:1,order:2,ok:3};
  const rows=all.filter(it=>{const s=invStat(it)[0];return(fl==="all"||(fl==="out"&&s==="out")||(fl==="low"&&s==="low")||(fl==="order"&&it.inc)||(fl==="general"&&!it.truck_id))&&(f==="all"||f==="t:"+it.truck_id)&&(!q||invNorm([it.name,it.part_no,invLabel(it)].join(" ")).includes(q))})
-  .sort((a,b)=>rk[invStat(a)[0]]-rk[invStat(b)[0]]||String(a.name).localeCompare(String(b.name)));
+  .sort((a,b)=>invRank(a)-invRank(b)||String(a.name).localeCompare(String(b.name)));
  $("invtb").innerHTML=rows.map(it=>{const s=invStat(it);return `<tr class="r" style="cursor:pointer" data-iid="${esc(it.id)}"><td><b>${esc(it.name)}</b>${it.part_no?`<br><span class="mu">${esc(it.part_no)}</span>`:""}</td><td data-l="Truck"><span class="b ${it.truck_id?"pb":"pn"}">${esc(invLabel(it))}</span></td><td data-l="Qty"><b style="font-size:18px">${esc(it.qty_available)}</b></td><td data-l="Status">${s[1]?`<span class="b ${s[2]}">${s[1]}</span>`:""}${it.inc?invIncTxt(it.inc):""}</td></tr>`}).join("");
  $("invempty").hidden=rows.length>0;$("invempty").textContent=all.length?"Nothing matches. Try another card or clear the search.":"No inventory items yet.";invSyncBox();
  $("inverr").innerHTML=INV.err?`<div class="sec" style="border-color:var(--pr)"><b>Could not load the inventory.</b><div class="mu">${esc(INV.err)}</div></div>`:""}
